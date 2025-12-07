@@ -1,0 +1,179 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 64px 16px;
+    background: #f7f9fc;
+}
+
+.login-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-mark {
+    border-radius: 8px;
+}
+
+.logo-text .brand {
+    font-weight: 700;
+    font-size: 20px;
+    color: #0f172a;
+}
+
+.logo-text .subtitle {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.card {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.card-sub {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.google-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #e6e9ef;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    justify-content: center;
+}
+
+.google-icon {
+    width: 20px;
+    height: 20px
+}
+
+.separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0;
+    color: #94a3b8;
+    font-weight: 600
+}
+
+.separator span {
+    background: #fff;
+    padding: 0 12px;
+}
+
+.separator:before {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e6e9ef;
+    margin-right: 12px
+}
+
+.separator:after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e6e9ef;
+    margin-left: 12px
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.label {
+    font-size: 12px;
+    color: #475569;
+    margin-bottom: 6px;
+    display: block
+}
+
+.input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #e6e9ef;
+    background: #fff;
+}
+
+.password-row {
+    display: flex;
+    gap: 12px;
+    align-items: center
+}
+
+.forgot-wrap {
+    display: flex;
+    align-items: flex-end
+}
+
+.forgot-link {
+    font-size: 13px;
+    color: #7c3aed;
+    text-decoration: none
+}
+
+.primary-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 0;
+    color: #fff;
+    background: linear-gradient(90deg, #7c3aed, #6d28d9);
+    font-weight: 700;
+    cursor: pointer
+}
+
+.card-footer {
+    text-align: center;
+    color: #667085;
+    font-size: 13px
+}
+
+.signup-link {
+    color: #7c3aed;
+    text-decoration: none;
+    font-weight: 600
+}
+
+@media (max-width:420px) {
+    .card {
+        padding: 20px;
+        border-radius: 12px
+    }
+}
