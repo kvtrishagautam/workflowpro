@@ -4,16 +4,28 @@ import './Landing.css';
 
 const GearLogo: React.FC = () => (
     <div className="brand-wrap">
-        <svg width="40" height="40" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-            <g>
-                <circle cx="18" cy="32" r="10" fill="#60A5FA" />
-                <circle cx="34" cy="16" r="8" fill="#FDBA74" />
-                <circle cx="50" cy="36" r="8" fill="#FBBF24" />
+        <svg width="36" height="36" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <defs>
+                <linearGradient id="wGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#a855f7" />
+                    <stop offset="100%" stopColor="#7c3aed" />
+                </linearGradient>
+            </defs>
+            {/* W Letter Design */}
+            <g fill="url(#wGradient)">
+                {/* Left peak */}
+                <path d="M 6 8 L 12 38 L 14 28 L 18 38 L 20 8 Z" />
+                {/* Middle valley */}
+                <path d="M 20 8 L 22 38 L 24 20 L 26 38 L 28 8 Z" />
+                {/* Right peak */}
+                <path d="M 28 8 L 30 38 L 34 28 L 36 38 L 42 8 Z" />
             </g>
+            {/* Decorative accent */}
+            <circle cx="24" cy="42" r="3" fill="#a855f7" opacity="0.6" />
         </svg>
         <div className="brand-text">
             <div className="brand-title">WorkflowPro</div>
-            <div className="brand-sub">Visual Automation Platform</div>
+            <div className="brand-sub">Visual Automation</div>
         </div>
     </div>
 );
@@ -28,6 +40,39 @@ const Node: React.FC<{ color: string; label: string; icon?: React.ReactNode }> =
 const Landing: React.FC = () => {
     return (
         <div className="landing-page">
+            {/* Abstract Background Elements */}
+            <div className="bg-container">
+                <svg className="bg-svg bg-1" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#a855f7" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.25" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="200" cy="200" r="150" fill="url(#grad1)" />
+                    <path d="M 100 100 Q 200 50, 300 100 T 300 300" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.5" />
+                </svg>
+                <svg className="bg-svg bg-2" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#ec4899" stopOpacity="0.28" />
+                            <stop offset="100%" stopColor="#f97316" stopOpacity="0.22" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="50" y="50" width="300" height="300" fill="url(#grad2)" rx="60" />
+                </svg>
+                <svg className="bg-svg bg-3" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.22" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="100" cy="300" r="100" fill="url(#grad3)" />
+                    <polygon points="350,50 400,150 350,200 300,150" fill="#3b82f6" opacity="0.28" />
+                </svg>
+            </div>
+
             <header className="site-header">
                 <div className="header-left">
                     <GearLogo />
@@ -114,6 +159,7 @@ const Landing: React.FC = () => {
                             <div className="step-badge">1</div>
                             <div className="step-body">
                                 <div className="step-heading">Choose a Trigger</div>
+                                <div className="step-description">Start with a schedule or webhook to initiate your workflow automatically.</div>
                                 <div className="step-pills">
                                     <span className="pill">Schedule</span>
                                     <span className="pill">Webhook</span>
@@ -125,6 +171,7 @@ const Landing: React.FC = () => {
                             <div className="step-badge">2</div>
                             <div className="step-body">
                                 <div className="step-heading">Add Actions</div>
+                                <div className="step-description">Drag and drop actions to build your automation flow with visual nodes.</div>
                                 <div className="step-actions">
                                     <div className="action-block" style={{ background: '#60A5FA' }}></div>
                                     <div className="action-block" style={{ background: '#FB923C' }}></div>
@@ -137,6 +184,7 @@ const Landing: React.FC = () => {
                             <div className="step-badge">3</div>
                             <div className="step-body">
                                 <div className="step-heading">Deploy & Relax</div>
+                                <div className="step-description">Activate your workflow and let it run automatically. Monitor results in real-time.</div>
                                 <div className="step-status">
                                     <span className="status-badge active">Active</span>
                                 </div>

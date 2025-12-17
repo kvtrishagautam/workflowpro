@@ -80,7 +80,7 @@ const Login: React.FC = () => {
                 </form>
 
                 <div className="card-footer">
-                    Don’t have an account? <Link to="/signup" className="signup-link">Sign up</Link>
+                    Don't have an account? <Link to="/signin" className="signup-link">Sign up</Link>
                 </div>
             </div>
         </div>
