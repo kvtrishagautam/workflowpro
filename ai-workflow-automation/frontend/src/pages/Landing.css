@@ -26,6 +26,7 @@
     position: absolute;
     opacity: 0.95;
     animation: float 15s ease-in-out infinite;
+    pointer-events: none;
 }
 
 .bg-1 {

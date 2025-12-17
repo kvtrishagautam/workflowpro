@@ -1,62 +1,88 @@
-# AI Workflow Automation System
+# WorkflowPro - Visual Automation Platform
 
-## Overview
-This project is an AI workflow automation system that allows users to create, manage, and execute workflows through a user-friendly interface. It consists of a backend service that handles API requests and a frontend application that provides a visual interface for designing workflows.
+A modern, open-source visual workflow automation platform built with React and TypeScript. Design, build, and deploy automated workflows with an intuitive drag-and-drop interface.
 
 ## Features
-- Create, update, and delete workflows
-- Visual interface for designing workflows
-- Integration with external services through connectors
-- Execution of workflows with state management
 
-## Project Structure
-```
-ai-workflow-automation
-├── backend          # Backend application
-│   ├── src         # Source code for the backend
-│   ├── package.json # Backend dependencies and scripts
-│   └── tsconfig.json # TypeScript configuration for the backend
-├── frontend         # Frontend application
-│   ├── src         # Source code for the frontend
-│   ├── package.json # Frontend dependencies and scripts
-│   └── tsconfig.json # TypeScript configuration for the frontend
-├── packages         # Shared packages
-│   ├── shared      # Shared utilities
-│   └── node-sdk    # Node SDK for interacting with the system
-├── scripts          # Scripts for running the application
-├── docker           # Docker configuration
-├── tests            # Unit tests for backend and frontend
-├── .env.example     # Example environment configuration
-├── package.json     # Root configuration for the project
-└── pnpm-workspace.yaml # Workspace configuration for pnpm
-```
+- **Visual Workflow Builder**: Drag-and-drop interface for creating complex automation workflows
+- **Multiple Node Types**: Webhook, JavaScript, HTTP, Slack, Conditional, and Delay nodes
+- **Real-time Canvas**: Interactive canvas with zoom, pan, and connection management
+- **Modern UI**: Beautiful, responsive design with glassmorphism effects
+- **TypeScript**: Fully typed codebase for better developer experience
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
-- Node.js (version X.X.X)
-- pnpm (version X.X.X)
+
+- Node.js 14+ and npm
 
 ### Installation
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd ai-workflow-automation
-   ```
 
-2. Install dependencies:
-   ```
-   pnpm install
-   ```
+```bash
+# Install dependencies
+cd ai-workflow-automation/frontend
+npm install
 
-### Running the Application
-To start the application, run the following script:
-```
-./scripts/start.sh
+# Start development server
+npm start
 ```
 
-### Contributing
-Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
+The application will open at `http://localhost:3000`
 
-### License
-This project is licensed under the MIT License. See the LICENSE file for more details.
+## Project Structure
+
+```
+ai-workflow-automation/
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # Reusable React components
+│   │   │   ├── Canvas.tsx          # Workflow canvas
+│   │   │   ├── NodePalette.tsx     # Node selection panel
+│   │   │   └── WorkflowNode.tsx    # Individual workflow nodes
+│   │   ├── pages/          # Page components
+│   │   │   ├── Landing.tsx         # Landing page
+│   │   │   ├── Login.tsx           # Login page
+│   │   │   ├── Signin.tsx          # Sign-up page
+│   │   │   └── Editor.tsx          # Workflow editor
+│   │   ├── types/          # TypeScript type definitions
+│   │   ├── assets/         # Static assets (images, icons)
+│   │   └── index.tsx       # Application entry point
+│   └── public/             # Public assets
+├── backend/                # Backend API (future)
+└── README.md
+```
+
+## Available Routes
+
+- `/` - Landing page with product overview
+- `/login` - User login
+- `/signin` - User registration
+- `/editor` - Workflow editor (main application)
+
+## Development
+
+### Available Scripts
+
+- `npm start` - Start development server
+- `npm build` - Build for production
+- `npm test` - Run tests
+- `npm eject` - Eject from Create React App (irreversible)
+
+### Technologies
+
+- **React 17** - UI framework
+- **TypeScript 4** - Type safety
+- **React Router 5** - Client-side routing
+- **CSS3** - Styling with modern features
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+Open-source project. See LICENSE file for details.
+
+## Support
+
+For issues and questions, please open an issue on GitHub.

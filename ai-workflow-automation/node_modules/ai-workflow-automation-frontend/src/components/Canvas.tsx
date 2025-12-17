@@ -3,6 +3,8 @@ import { Workflow, NodeProps, Edge } from '../types';
 import WorkflowNode from './WorkflowNode';
 import './Canvas.css';
 
+type NodeType = 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay';
+
 type CanvasProps = {
     workflow?: Workflow | null;
     onWorkflowChange?: (workflow: Workflow) => void;
@@ -61,9 +63,9 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
         const x = (e.clientX - rect.left - pan.x) / zoom;
         const y = (e.clientY - rect.top - pan.y) / zoom;
 
-        const newNode: NodeProps = {
+        const newNode: any = {
             id: `node_${Date.now()}`,
-            type: nodeType as NodeProps['type'],
+            type: nodeType,
             data: {
                 label: `${nodeType} Node`,
                 config: {},

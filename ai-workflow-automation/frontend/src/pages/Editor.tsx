@@ -4,6 +4,8 @@ import NodePalette from '../components/NodePalette';
 import { Workflow, NodeProps } from '../types';
 import './Editor.css';
 
+type NodeType = 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay';
+
 const Editor: React.FC = () => {
     const [workflow, setWorkflow] = useState<Workflow>({
         id: `workflow_${Date.now()}`,
@@ -26,9 +28,9 @@ const Editor: React.FC = () => {
     };
 
     const handleAddNode = (nodeType: string) => {
-        const newNode = {
+        const newNode: any = {
             id: `node_${Date.now()}`,
-            type: nodeType as NodeProps['type'],
+            type: nodeType,
             data: {
                 label: `${nodeType} Node`,
                 config: {},

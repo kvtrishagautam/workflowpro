@@ -82,7 +82,7 @@ const Landing: React.FC = () => {
                     <a href="#integrations">Integrations</a>
                     <a href="#docs">Docs</a>
                     <a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
-                    <Link to="/login" className="btn btn-primary-small">Sign up</Link>
+                    <Link to="/signin" className="btn btn-primary-small">Sign up</Link>
                 </nav>
             </header>
 

@@ -43,11 +43,11 @@ export const NODE_TYPES = {
     HTTP: 'http',
     CONDITIONAL: 'conditional',
     DELAY: 'delay',
-} as const;
+};
 
 // Node configuration interface
 export interface NodeConfig {
-    type: typeof NODE_TYPES[keyof typeof NODE_TYPES];
+    type: 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay';
     label: string;
     icon: string;
     color: string;
