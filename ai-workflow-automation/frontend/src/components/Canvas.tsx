@@ -1,18 +1,19 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Workflow, NodeProps, Edge } from '../types';
 import WorkflowNode from './WorkflowNode';
 import './Canvas.css';
 
-type NodeType = 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay';
+
 
 type CanvasProps = {
     workflow?: Workflow | null;
     onWorkflowChange?: (workflow: Workflow) => void;
+    onNodeSelect?: (nodeId: string | null) => void;
+    selectedNodeId?: string | null;
 };
 
-const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
+const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelect, selectedNodeId }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
-    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [draggedNode, setDraggedNode] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStart, setConnectionStart] = useState<string | null>(null);
@@ -25,7 +26,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
     }
 
     const handleNodeSelect = (nodeId: string) => {
-        setSelectedNodeId(nodeId);
+        onNodeSelect?.(nodeId);
     };
 
     const handleNodeDelete = (nodeId: string) => {
@@ -39,7 +40,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
         };
 
         onWorkflowChange?.(updated);
-        setSelectedNodeId(null);
+        onNodeSelect?.(null);
     };
 
     const handleNodeDragStart = (e: React.DragEvent, nodeId: string) => {
@@ -81,13 +82,52 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
         onWorkflowChange?.(updated);
     };
 
+    const handleConnectStart = (nodeId: string) => {
+        setIsConnecting(true);
+        setConnectionStart(nodeId);
+
+        // Initial position for the preview line
+        const node = workflow.nodes.find(n => n.id === nodeId);
+        if (node) {
+            setConnectionEnd({
+                x: node.position.x + 110,
+                y: node.position.y + 100
+            });
+        }
+    };
+
+    const handleConnectEnd = (targetNodeId: string) => {
+        if (isConnecting && connectionStart && connectionStart !== targetNodeId) {
+            // Create a new edge
+            const newEdge: Edge = {
+                id: `edge_${Date.now()}`,
+                source: connectionStart,
+                target: targetNodeId,
+            };
+
+            // Check if edge already exists to avoid duplicates
+            const edgeExists = workflow.edges.some(
+                e => e.source === connectionStart && e.target === targetNodeId
+            );
+
+            if (!edgeExists) {
+                const updated = {
+                    ...workflow,
+                    edges: [...workflow.edges, newEdge],
+                };
+                onWorkflowChange?.(updated);
+            }
+        }
+
+        setIsConnecting(false);
+        setConnectionStart(null);
+        setConnectionEnd(null);
+    };
+
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
         if (draggedNode && e.buttons === 1) {
             const canvas = canvasRef.current;
             if (!canvas) return;
-
-            const node = workflow.nodes.find((n) => n.id === draggedNode);
-            if (!node) return;
 
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left - pan.x) / zoom;
@@ -118,10 +158,18 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
     };
 
     const handleCanvasMouseUp = () => {
-        setDraggedNode(null);
-        setIsConnecting(false);
-        setConnectionStart(null);
-        setConnectionEnd(null);
+        if (draggedNode) setDraggedNode(null);
+        // Important: we don't clear isConnecting here because handleConnectEnd 
+        // will be triggered on the target node if the mouse is released over it.
+        // However, if we release over empty space, we should clear it.
+        // Accomplished by giving the canvas a mouseUp too.
+        setTimeout(() => {
+            if (isConnecting) {
+                setIsConnecting(false);
+                setConnectionStart(null);
+                setConnectionEnd(null);
+            }
+        }, 100);
     };
 
     const handleMouseWheel = (e: React.WheelEvent) => {
@@ -185,6 +233,8 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
                             onSelect={handleNodeSelect}
                             onDelete={handleNodeDelete}
                             onDragStart={handleNodeDragStart}
+                            onConnectStart={handleConnectStart}
+                            onConnectEnd={handleConnectEnd}
                         />
                     ))}
                 </div>
@@ -219,7 +269,16 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
                     {isConnecting && connectionStart && connectionEnd && (
                         <path
                             className="connection-preview"
-                            d={`M ${connectionEnd.x} ${connectionEnd.y} L ${connectionEnd.x} ${connectionEnd.y}`}
+                            d={`M ${(() => {
+                                const node = workflow.nodes.find(n => n.id === connectionStart);
+                                return node ? node.position.x + 110 : 0;
+                            })()} ${(() => {
+                                const node = workflow.nodes.find(n => n.id === connectionStart);
+                                return node ? node.position.y + 100 : 0;
+                            })()} L ${connectionEnd.x} ${connectionEnd.y}`}
+                            stroke="#8B5CF6"
+                            strokeWidth="3"
+                            strokeDasharray="5,5"
                         />
                     )}
                 </svg>

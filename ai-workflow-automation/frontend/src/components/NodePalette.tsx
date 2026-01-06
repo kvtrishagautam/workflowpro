@@ -57,6 +57,20 @@ const nodeOptions: NodeOption[] = [
         description: 'Wait before next step',
         color: '#94A3B8',
     },
+    {
+        type: NODE_TYPES.EMAIL_DISCOVERY,
+        icon: '🔍',
+        label: 'Email Discovery',
+        description: 'Discover business emails by keywords',
+        color: '#EC4899',
+    },
+    {
+        type: NODE_TYPES.EMAIL_SENDING,
+        icon: '✉️',
+        label: 'Email Sending',
+        description: 'Send automated emails',
+        color: '#10B981',
+    },
 ];
 
 const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {

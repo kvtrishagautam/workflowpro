@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "concurrently \"pnpm --filter backend start\" \"pnpm --filter frontend start\"",
+    "start": "pnpm --filter ai-workflow-automation-frontend start",
     "build": "pnpm --filter backend build && pnpm --filter frontend build",
     "test": "pnpm --filter backend test && pnpm --filter frontend test"
   },

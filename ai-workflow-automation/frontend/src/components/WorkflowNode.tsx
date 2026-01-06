@@ -8,6 +8,8 @@ interface WorkflowNodeComponentProps {
     onSelect: (nodeId: string) => void;
     onDelete: (nodeId: string) => void;
     onDragStart: (e: React.DragEvent, nodeId: string) => void;
+    onConnectStart?: (nodeId: string) => void;
+    onConnectEnd?: (nodeId: string) => void;
 }
 
 const NodeIcons: Record<string, string> = {
@@ -17,6 +19,8 @@ const NodeIcons: Record<string, string> = {
     http: '🌐',
     conditional: '🔀',
     delay: '⏱️',
+    emailDiscovery: '🔍',
+    emailSending: '✉️',
 };
 
 const NodeColors: Record<string, string> = {
@@ -26,6 +30,8 @@ const NodeColors: Record<string, string> = {
     http: '#FBBF24',
     conditional: '#F87171',
     delay: '#94A3B8',
+    emailDiscovery: '#EC4899',
+    emailSending: '#10B981',
 };
 
 const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
@@ -34,6 +40,8 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
     onSelect,
     onDelete,
     onDragStart,
+    onConnectStart,
+    onConnectEnd,
 }) => {
     const [showMenu, setShowMenu] = useState(false);
 
@@ -84,8 +92,22 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
             </div>
 
             {/* Connection Points */}
-            <div className="node-connector input-connector" title="Input" />
-            <div className="node-connector output-connector" title="Output" />
+            <div
+                className="node-connector input-connector"
+                title="Input"
+                onMouseUp={(e) => {
+                    e.stopPropagation();
+                    onConnectEnd?.(node.id);
+                }}
+            />
+            <div
+                className="node-connector output-connector"
+                title="Output"
+                onMouseDown={(e) => {
+                    e.stopPropagation();
+                    onConnectStart?.(node.id);
+                }}
+            />
 
             {/* Context Menu */}
             {showMenu && (
