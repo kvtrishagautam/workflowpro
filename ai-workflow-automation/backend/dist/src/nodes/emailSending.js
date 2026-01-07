@@ -91,7 +91,8 @@ exports.emailSendingNode = {
     },
     execute: async (input) => {
         try {
-            console.log('Starting Email Sending execution...');
+            console.log('[EmailSending] Starting execution...');
+            console.log('[EmailSending] Input received:', JSON.stringify(input, null, 2));
             const { recipient, emails, subject, body, attachments } = input;
             if (!subject || !body) {
                 throw new Error('Missing required inputs: subject or body.');

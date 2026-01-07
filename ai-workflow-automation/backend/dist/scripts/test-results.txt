@@ -1,0 +1,85 @@
+=== Testing Email Discovery ===
+Discovery Input: {
+  "keywords": [
+    "technology",
+    "startup"
+  ],
+  "industry": "technology"
+}
+Discovery Result: {
+  "status": "success",
+  "data": {
+    "emails": [
+      {
+        "email": "contact@techstartups.io",
+        "source_url": "https://techstartups.io/contact",
+        "matched_keyword": "startup",
+        "confidence_score": 0.95
+      },
+      {
+        "email": "support@edutech.net",
+        "source_url": "https://edutech.net/support",
+        "matched_keyword": "technology",
+        "confidence_score": 0.95
+      }
+    ]
+  }
+}
+
+=== Testing Email Sending ===
+Discovered Emails: [
+  {
+    "email": "contact@techstartups.io",
+    "source_url": "https://techstartups.io/contact",
+    "matched_keyword": "startup",
+    "confidence_score": 0.95
+  },
+  {
+    "email": "support@edutech.net",
+    "source_url": "https://edutech.net/support",
+    "matched_keyword": "technology",
+    "confidence_score": 0.95
+  }
+]
+Number of emails discovered: 2
+Sending Input: {
+  "emails": [
+    {
+      "email": "contact@techstartups.io",
+      "source_url": "https://techstartups.io/contact",
+      "matched_keyword": "startup",
+      "confidence_score": 0.95
+    },
+    {
+      "email": "support@edutech.net",
+      "source_url": "https://edutech.net/support",
+      "matched_keyword": "technology",
+      "confidence_score": 0.95
+    }
+  ],
+  "subject": "Test Email from Workflow",
+  "body": "<h1>Hello!</h1><p>This is a test email from the workflow automation system.</p>"
+}
+Sending Result: {
+  "status": "success",
+  "data": {
+    "sentCount": 2,
+    "messageIds": [
+      "<b938869e-b150-361f-c13f-3d273f134eaa@workflowpro.com>",
+      "<4e5a4ff4-d18f-ecbe-0e06-4ff4e10230f8@workflowpro.com>"
+    ],
+    "status": "sent",
+    "results": [
+      {
+        "messageId": "<b938869e-b150-361f-c13f-3d273f134eaa@workflowpro.com>"
+      },
+      {
+        "messageId": "<4e5a4ff4-d18f-ecbe-0e06-4ff4e10230f8@workflowpro.com>"
+      }
+    ]
+  }
+}
+
+✅ Email flow test completed successfully!
+
+Log file saved to: C:\Users\koilo\OneDrive\Desktop\wf\workflowpro\ai-workflow-automation\backend\dist\scripts\test-results.txt

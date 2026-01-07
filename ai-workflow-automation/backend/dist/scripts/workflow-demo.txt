@@ -1,0 +1,55 @@
+╔════════════════════════════════════════════════════════════╗
+║     COMPLETE EMAIL WORKFLOW DEMONSTRATION                  ║
+╚════════════════════════════════════════════════════════════╝
+
+📧 STEP 1: Discovering Emails from Websites
+
+Target URLs:
+  - https://arstechnica.com/contact-us/
+  - https://www.wired.com/about/contact/
+
+Starting email discovery...
+✅ Discovery Complete!
+
+Results:
+  - Total scraped: 1
+  - Unique emails: 1
+  - Returned: 1
+
+Discovered Emails:
+  1. adinquiries@condenast.com
+     Source: https://arstechnica.com/contact-us/
+     Confidence: 85%
+     Keyword: technology
+
+
+📨 STEP 2: Sending Emails to Discovered Addresses
+
+Preparing to send emails to 1 recipient(s)...
+Subject: "Hello from Workflow Pro - Automated Email"
+
+✅ Sending Complete!
+
+Results:
+  - Emails sent: 1
+  - Status: sent
+
+Email Details:
+  1. Message ID: <ce4d7bc8-2d68-71af-274b-3e7e22d4d62e@workflowpro.com>
+
+╔════════════════════════════════════════════════════════════╗
+║     WORKFLOW COMPLETED SUCCESSFULLY! 🎉                    ║
+╚════════════════════════════════════════════════════════════╝
+
+📝 Summary:
+   1. Scraped 1 emails from 2 websites
+   2. Filtered to 1 unique valid emails
+   3. Sent 1 emails successfully
+
+💡 Next Steps:
+   - Customize the email template in the sending node
+   - Add more URLs to discover more emails
+   - Configure SMTP settings for real email delivery
+   - Integrate with the frontend for a complete UI
+
+Log file saved to: C:\Users\koilo\OneDrive\Desktop\wf\workflowpro\ai-workflow-automation\backend\dist\scripts\workflow-demo.txt

@@ -1,0 +1,71 @@
+=== Testing Real Email Scraping ===
+
+--- Test 1: Scraping specific URLs ---
+Input: {
+  "urls": [
+    "https://www.ycombinator.com/contact",
+    "https://techcrunch.com/contact/"
+  ]
+}
+Result: {
+  "status": "success",
+  "data": {
+    "emails": [],
+    "totalScraped": 0,
+    "uniqueCount": 0,
+    "returnedCount": 0
+  }
+}
+✅ Found 0 emails from direct URLs
+
+--- Test 2: Scraping with keywords ---
+Input: {
+  "keywords": [
+    "technology",
+    "startup"
+  ],
+  "industry": "technology",
+  "maxEmails": 20
+}
+Result: {
+  "status": "success",
+  "data": {
+    "emails": [
+      {
+        "email": "adinquiries@condenast.com",
+        "source_url": "https://arstechnica.com/contact-us/",
+        "confidence_score": 0.85,
+        "matched_keyword": "technology"
+      }
+    ],
+    "totalScraped": 1,
+    "uniqueCount": 1,
+    "returnedCount": 1
+  }
+}
+✅ Found 1 emails using keywords
+  1. adinquiries@condenast.com (keyword: technology)
+
+--- Test 3: Scraping with domain filter ---
+Input: {
+  "urls": [
+    "https://www.ycombinator.com/contact",
+    "https://techcrunch.com/contact/"
+  ],
+  "targetDomains": [
+    "ycombinator.com"
+  ]
+}
+Result: {
+  "status": "success",
+  "data": {
+    "emails": [],
+    "totalScraped": 0,
+    "uniqueCount": 0,
+    "returnedCount": 0
+  }
+}
+✅ Found 0 emails matching domain filter
+
+=== All tests completed ===
+Log file saved to: C:\Users\koilo\OneDrive\Desktop\wf\workflowpro\ai-workflow-automation\backend\dist\scripts\real-email-test.txt

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Workflow, NodeProps, Edge } from '../types';
+import { Workflow, Edge } from '../types';
 import WorkflowNode from './WorkflowNode';
 import './Canvas.css';
 
