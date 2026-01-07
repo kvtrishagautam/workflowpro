@@ -8,6 +8,8 @@ interface WorkflowNodeComponentProps {
     onSelect: (nodeId: string) => void;
     onDelete: (nodeId: string) => void;
     onDragStart: (e: React.DragEvent, nodeId: string) => void;
+    onConnectionStart: (nodeId: string, type: 'input' | 'output') => void;
+    onConnectionEnd: (nodeId: string, type: 'input' | 'output') => void;
 }
 
 const NodeIcons: Record<string, string> = {
@@ -34,6 +36,8 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
     onSelect,
     onDelete,
     onDragStart,
+    onConnectionStart,
+    onConnectionEnd,
 }) => {
     const [showMenu, setShowMenu] = useState(false);
 
@@ -51,6 +55,7 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
             onClick={() => onSelect(node.id)}
             onDragStart={(e) => onDragStart(e, node.id)}
             draggable
+            data-node-id={node.id}
         >
             {/* Node Header */}
             <div className="node-header" style={{ backgroundColor: color }}>
@@ -84,8 +89,24 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
             </div>
 
             {/* Connection Points */}
-            <div className="node-connector input-connector" title="Input" />
-            <div className="node-connector output-connector" title="Output" />
+            <div
+                className="node-connector input-connector"
+                title="Input - drag here to connect"
+                onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onConnectionStart(node.id, 'input');
+                }}
+            />
+            <div
+                className="node-connector output-connector"
+                title="Output - drag from here to connect"
+                onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onConnectionStart(node.id, 'output');
+                }}
+            />
 
             {/* Context Menu */}
             {showMenu && (

@@ -2,17 +2,30 @@ import React, { useState } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import './Login.css';
 import GoogleIcon from '../assets/google.svg';
+import { authAPI } from '../services/api';
 
 const Login: React.FC = () => {
     const history = useHistory();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // TODO: wire real auth
-        console.log('sign in', { email, password });
-        history.push('/editor');
+        setError('');
+        setLoading(true);
+
+        try {
+            const response = await authAPI.login(email, password);
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            history.push('/editor');
+        } catch (err) {
+            setError('Login failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -47,6 +60,8 @@ const Login: React.FC = () => {
                 <div className="separator"><span>OR</span></div>
 
                 <form className="form" onSubmit={handleSubmit}>
+                    {error && <div style={{ color: '#ef4444', marginBottom: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>{error}</div>}
+
                     <label className="label">Email</label>
                     <input
                         name="email"
@@ -56,6 +71,7 @@ const Login: React.FC = () => {
                         placeholder="email@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
 
                     <div className="password-row">
@@ -69,6 +85,7 @@ const Login: React.FC = () => {
                                 placeholder="Enter your password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                required
                             />
                         </div>
                         <div className="forgot-wrap">
@@ -76,7 +93,9 @@ const Login: React.FC = () => {
                         </div>
                     </div>
 
-                    <button type="submit" className="primary-btn">Sign in</button>
+                    <button type="submit" className="primary-btn" disabled={loading}>
+                        {loading ? 'Signing in...' : 'Sign in'}
+                    </button>
                 </form>
 
                 <div className="card-footer">

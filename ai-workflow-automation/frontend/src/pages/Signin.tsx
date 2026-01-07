@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import './Signin.css';
 import GoogleIcon from '../assets/google.svg';
+import { authAPI } from '../services/api';
 
 const Signin: React.FC = () => {
     const history = useHistory();
@@ -10,16 +11,30 @@ const Signin: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // TODO: wire real auth
+        setError('');
+
         if (password !== confirmPassword) {
-            alert('Passwords do not match!');
+            setError('Passwords do not match!');
             return;
         }
-        console.log('sign up', { firstName, lastName, email, password });
-        history.push('/editor');
+
+        setLoading(true);
+        try {
+            const name = `${firstName} ${lastName}`.trim();
+            const response = await authAPI.register(email, password, name);
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            history.push('/editor');
+        } catch (err) {
+            setError('Registration failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -54,6 +69,8 @@ const Signin: React.FC = () => {
                 <div className="separator"><span>OR</span></div>
 
                 <form className="form" onSubmit={handleSubmit}>
+                    {error && <div style={{ color: '#ef4444', marginBottom: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>{error}</div>}
+
                     <div className="name-row">
                         <div style={{ flex: 1 }}>
                             <label className="label">First Name</label>
@@ -64,6 +81,7 @@ const Signin: React.FC = () => {
                                 placeholder="John"
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
+                                required
                             />
                         </div>
                         <div style={{ flex: 1 }}>
@@ -75,6 +93,7 @@ const Signin: React.FC = () => {
                                 placeholder="Doe"
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
+                                required
                             />
                         </div>
                     </div>
@@ -88,6 +107,7 @@ const Signin: React.FC = () => {
                         placeholder="email@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
 
                     <label className="label">Password</label>
@@ -99,6 +119,8 @@ const Signin: React.FC = () => {
                         placeholder="Create a strong password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
                     />
 
                     <label className="label">Confirm Password</label>
@@ -110,9 +132,12 @@ const Signin: React.FC = () => {
                         placeholder="Confirm your password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
                     />
 
-                    <button type="submit" className="primary-btn">Create Account</button>
+                    <button type="submit" className="primary-btn" disabled={loading}>
+                        {loading ? 'Creating Account...' : 'Create Account'}
+                    </button>
                 </form>
 
                 <div className="card-footer">

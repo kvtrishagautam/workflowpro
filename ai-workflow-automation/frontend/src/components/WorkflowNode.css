@@ -1,54 +1,60 @@
 .workflow-node {
     position: absolute;
     width: 220px;
-    background: #ffffff;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     border: 2px solid #60A5FA;
     border-radius: 12px;
     box-shadow:
-        0 4px 12px rgba(15, 23, 42, 0.08),
-        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+        0 8px 24px rgba(15, 23, 42, 0.12),
+        0 2px 8px rgba(15, 23, 42, 0.08),
+        inset 0 1px 2px rgba(255, 255, 255, 0.8);
     cursor: move;
     user-select: none;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: visible;
 }
 
 .workflow-node:hover {
     box-shadow:
-        0 6px 16px rgba(15, 23, 42, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.5);
-    transform: translateY(-2px);
+        0 12px 32px rgba(15, 23, 42, 0.16),
+        0 4px 12px rgba(15, 23, 42, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.8);
+    transform: translateY(-4px);
 }
 
 .workflow-node.selected {
     box-shadow:
-        0 8px 24px rgba(124, 58, 237, 0.25),
-        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+        0 16px 40px rgba(124, 58, 237, 0.3),
+        0 8px 16px rgba(124, 58, 237, 0.2),
+        inset 0 1px 2px rgba(255, 255, 255, 0.8);
     border-color: #7c3aed;
+    border-width: 3px;
 }
 
 .node-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 12px 14px;
     background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
     border-radius: 10px 10px 0 0;
     color: white;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.5px;
+    text-transform: capitalize;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .node-icon {
-    font-size: 16px;
+    font-size: 18px;
     display: flex;
     align-items: center;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .node-type {
     flex: 1;
-    text-transform: capitalize;
 }
 
 .node-menu-btn {
@@ -57,23 +63,26 @@
     color: white;
     cursor: pointer;
     border-radius: 4px;
-    padding: 4px 6px;
-    font-size: 14px;
+    padding: 4px 8px;
+    font-size: 16px;
     transition: all 0.2s ease;
+    font-weight: bold;
 }
 
 .node-menu-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(1.1);
 }
 
 .node-content {
-    padding: 12px;
+    padding: 14px;
+    background: white;
 }
 
 .node-label {
     margin: 0;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     color: #0f172a;
     word-break: break-word;
 }
@@ -82,8 +91,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid #e2e8f0;
 }
 
@@ -91,37 +100,67 @@
     font-size: 11px;
     color: #64748b;
     font-family: 'Monaco', 'Courier New', monospace;
+    background: #f8fafc;
+    padding: 4px 6px;
+    border-radius: 4px;
 }
 
 /* Connection Points (Handles) */
 .node-connector {
     position: absolute;
-    width: 12px;
-    height: 12px;
-    background: white;
-    border: 2px solid #60A5FA;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+    border: 3px solid #60A5FA;
     border-radius: 50%;
     cursor: crosshair;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);
 }
 
 .node-connector:hover {
-    width: 16px;
-    height: 16px;
-    background: #60A5FA;
-    box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+    border-color: #7c3aed;
+    border-width: 3px;
+    box-shadow:
+        0 0 12px rgba(96, 165, 250, 0.6),
+        0 0 24px rgba(124, 58, 237, 0.4);
+    animation: pulse-connector 1s ease-in-out infinite;
+}
+
+@keyframes pulse-connector {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .input-connector {
     left: 50%;
-    top: -8px;
+    top: -10px;
     transform: translateX(-50%);
+}
+
+.input-connector:hover {
+    top: -13px;
 }
 
 .output-connector {
     left: 50%;
-    bottom: -8px;
+    bottom: -10px;
     transform: translateX(-50%);
+}
+
+.output-connector:hover {
+    bottom: -13px;
 }
 
 /* Context Menu */
@@ -132,17 +171,30 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
     z-index: 1000;
-    min-width: 120px;
+    min-width: 140px;
     overflow: hidden;
-    margin-top: 4px;
+    margin-top: 8px;
+    animation: menuSlideIn 0.2s ease-out;
+}
+
+@keyframes menuSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .menu-item {
     display: block;
     width: 100%;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border: none;
     background: transparent;
     color: #475569;
@@ -159,12 +211,13 @@
 }
 
 .menu-item:hover {
-    background: #f8fafc;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     color: #0f172a;
+    padding-left: 18px;
 }
 
 .menu-item.delete:hover {
-    background: #fee2e2;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     color: #dc2626;
 }
 
