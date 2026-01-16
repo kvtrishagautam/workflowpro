@@ -7,7 +7,7 @@ interface WorkflowNodeComponentProps {
     isSelected: boolean;
     onSelect: (nodeId: string) => void;
     onDelete: (nodeId: string) => void;
-    onDragStart: (e: React.DragEvent, nodeId: string) => void;
+    onDragStart: (e: React.MouseEvent, nodeId: string) => void;
     onConnectStart?: (nodeId: string) => void;
     onConnectEnd?: (nodeId: string) => void;
 }
@@ -57,8 +57,13 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                 borderColor: color,
             }}
             onClick={() => onSelect(node.id)}
-            onDragStart={(e) => onDragStart(e, node.id)}
-            draggable
+            onMouseDown={(e) => {
+                // Only start drag if not clicking on a connector
+                const target = e.target;
+                if (target instanceof HTMLElement && !target.classList.contains('node-connector')) {
+                    onDragStart(e, node.id);
+                }
+            }}
         >
             {/* Node Header */}
             <div className="node-header" style={{ backgroundColor: color }}>

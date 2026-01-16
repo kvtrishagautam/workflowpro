@@ -43,7 +43,8 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelec
         onNodeSelect?.(null);
     };
 
-    const handleNodeDragStart = (e: React.DragEvent, nodeId: string) => {
+    const handleNodeDragStart = (e: React.MouseEvent, nodeId: string) => {
+        e.stopPropagation();
         setDraggedNode(nodeId);
     };
 
@@ -61,8 +62,71 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelec
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - pan.x) / zoom;
-        const y = (e.clientY - rect.top - pan.y) / zoom;
+        let x = (e.clientX - rect.left - pan.x) / zoom;
+        let y = (e.clientY - rect.top - pan.y) / zoom;
+
+        // Grid snapping (snap to 20px grid)
+        const gridSize = 20;
+        x = Math.round(x / gridSize) * gridSize;
+        y = Math.round(y / gridSize) * gridSize;
+
+        // Collision detection - check if position overlaps with existing nodes
+        const nodeWidth = 220;
+        const nodeHeight = 100;
+        const minSpacing = 40; // Minimum spacing between nodes
+
+        const hasCollision = (testX: number, testY: number): boolean => {
+            return workflow.nodes.some(node => {
+                const dx = Math.abs(node.position.x - testX);
+                const dy = Math.abs(node.position.y - testY);
+                return dx < (nodeWidth + minSpacing) && dy < (nodeHeight + minSpacing);
+            });
+        };
+
+        // If there's a collision, find the next available position
+        if (hasCollision(x, y)) {
+            // Try positions in a spiral pattern around the drop point
+            let found = false;
+            const maxAttempts = 50;
+            let attempt = 0;
+            let offsetX = nodeWidth + minSpacing;
+            let offsetY = nodeHeight + minSpacing;
+
+            // First try horizontal positions
+            for (let i = 1; i <= 5 && !found; i++) {
+                const testX = x + (offsetX * i);
+                if (!hasCollision(testX, y)) {
+                    x = testX;
+                    found = true;
+                }
+            }
+
+            // Then try vertical positions
+            if (!found) {
+                for (let i = 1; i <= 5 && !found; i++) {
+                    const testY = y + (offsetY * i);
+                    if (!hasCollision(x, testY)) {
+                        y = testY;
+                        found = true;
+                    }
+                }
+            }
+
+            // Finally try a grid pattern
+            if (!found) {
+                for (let row = 0; row < 5 && !found; row++) {
+                    for (let col = 0; col < 5 && !found; col++) {
+                        const testX = x + (offsetX * col);
+                        const testY = y + (offsetY * row);
+                        if (!hasCollision(testX, testY)) {
+                            x = testX;
+                            y = testY;
+                            found = true;
+                        }
+                    }
+                }
+            }
+        }
 
         const newNode: any = {
             id: `node_${Date.now()}`,
@@ -133,6 +197,9 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelec
             const x = (e.clientX - rect.left - pan.x) / zoom;
             const y = (e.clientY - rect.top - pan.y) / zoom;
 
+            // No grid snapping during drag for smooth movement
+            // Grid snapping will happen on drop instead
+
             const updatedNodes = workflow.nodes.map((n) =>
                 n.id === draggedNode ? { ...n, position: { x: Math.max(0, x), y: Math.max(0, y) } } : n
             );
@@ -158,7 +225,32 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelec
     };
 
     const handleCanvasMouseUp = () => {
-        if (draggedNode) setDraggedNode(null);
+        if (draggedNode) {
+            // Snap to grid when drag ends for clean positioning
+            const gridSize = 20;
+            const draggedNodeData = workflow.nodes.find(n => n.id === draggedNode);
+
+            if (draggedNodeData) {
+                const snappedX = Math.round(draggedNodeData.position.x / gridSize) * gridSize;
+                const snappedY = Math.round(draggedNodeData.position.y / gridSize) * gridSize;
+
+                const updatedNodes = workflow.nodes.map((n) =>
+                    n.id === draggedNode
+                        ? { ...n, position: { x: Math.max(0, snappedX), y: Math.max(0, snappedY) } }
+                        : n
+                );
+
+                const updated = {
+                    ...workflow,
+                    nodes: updatedNodes,
+                };
+
+                onWorkflowChange?.(updated);
+            }
+
+            setDraggedNode(null);
+        }
+
         // Important: we don't clear isConnecting here because handleConnectEnd 
         // will be triggered on the target node if the mouse is released over it.
         // However, if we release over empty space, we should clear it.
@@ -193,6 +285,38 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelec
         });
 
         setZoom(newZoom);
+    };
+
+    const handleAutoLayout = () => {
+        if (workflow.nodes.length === 0) return;
+
+        const nodeWidth = 220;
+        const nodeHeight = 120;
+        const horizontalSpacing = 100;
+        const verticalSpacing = 80;
+        const nodesPerRow = 3;
+        const startX = 50;
+        const startY = 50;
+
+        const updatedNodes = workflow.nodes.map((node, index) => {
+            const row = Math.floor(index / nodesPerRow);
+            const col = index % nodesPerRow;
+
+            return {
+                ...node,
+                position: {
+                    x: startX + (col * (nodeWidth + horizontalSpacing)),
+                    y: startY + (row * (nodeHeight + verticalSpacing))
+                }
+            };
+        });
+
+        const updated = {
+            ...workflow,
+            nodes: updatedNodes,
+        };
+
+        onWorkflowChange?.(updated);
     };
 
     return (
@@ -304,6 +428,14 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onNodeSelec
                         +
                     </button>
                 </div>
+                <button
+                    className="auto-layout-btn"
+                    onClick={handleAutoLayout}
+                    title="Auto-organize nodes in a grid"
+                    disabled={workflow.nodes.length === 0}
+                >
+                    ⚡ Auto Layout
+                </button>
             </div>
         </div>
     );
