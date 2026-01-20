@@ -104,6 +104,7 @@ class ApiService {
         const typeMap: Record<string, string> = {
             'emailDiscovery': 'EMAIL_DISCOVERY',
             'emailSending': 'EMAIL_SENDING',
+            'scheduledEmail': 'SCHEDULED_EMAIL',
             'webhook': 'WEBHOOK',
             'javascript': 'JAVASCRIPT',
             'slack': 'SLACK',

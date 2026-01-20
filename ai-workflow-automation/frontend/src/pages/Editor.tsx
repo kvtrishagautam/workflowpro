@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Canvas from '../components/Canvas';
 import NodePalette from '../components/NodePalette';
-import { Workflow } from '../types';
+import { Workflow, NODE_TYPES } from '../types';
 import { apiService, WorkflowExecutionResult } from '../services/api';
 import './Editor.css';
 
@@ -62,12 +62,23 @@ const Editor: React.FC = () => {
     };
 
     const handleAddNode = (nodeType: string) => {
+        // Initialize default config based on node type
+        let defaultConfig: any = {};
+        if (nodeType === NODE_TYPES.SCHEDULED_EMAIL) {
+            defaultConfig = {
+                scheduleType: 'one-time',
+                subject: '',
+                body: '',
+                recipients: '',
+            };
+        }
+
         const newNode: any = {
             id: `node_${Date.now()}`,
             type: nodeType,
             data: {
                 label: `${nodeType} Node`,
-                config: {},
+                config: defaultConfig,
             },
             position: { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 },
         };
@@ -217,7 +228,59 @@ const Editor: React.FC = () => {
                         </div>
                     )}
 
-                    {!['emailDiscovery', 'emailSending'].includes(selectedNode.type) && (
+                    {selectedNode.type === 'scheduledEmail' && (
+                        <div>
+                            {renderConfigField(selectedNode.id, 'subject', selectedNode.data.config?.subject)}
+                            {renderConfigField(selectedNode.id, 'body', selectedNode.data.config?.body, 'textarea')}
+                            <small style={{ fontSize: '10px', color: '#64748b' }}>Supports HTML and {'{{placeholders}}'}</small>
+
+                            {/* Schedule Type Selector */}
+                            <div className="property-field">
+                                <label>Schedule Type</label>
+                                <select
+                                    value={selectedNode.data.config?.scheduleType || 'one-time'}
+                                    onChange={(e) => handleConfigChange(selectedNode.id, 'scheduleType', e.target.value)}
+                                >
+                                    <option value="one-time">One-time</option>
+                                    <option value="recurring">Recurring</option>
+                                </select>
+                            </div>
+
+                            {/* Conditional: One-time DateTime */}
+                            {(selectedNode.data.config?.scheduleType === 'one-time' || !selectedNode.data.config?.scheduleType) && (
+                                <div className="property-field">
+                                    <label>Scheduled Date & Time</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={selectedNode.data.config?.scheduledDateTime || ''}
+                                        onChange={(e) => handleConfigChange(selectedNode.id, 'scheduledDateTime', e.target.value)}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Conditional: Recurring Cron */}
+                            {selectedNode.data.config?.scheduleType === 'recurring' && (
+                                <div className="property-field">
+                                    <label>Recurrence Pattern</label>
+                                    <select
+                                        value={selectedNode.data.config?.cronExpression || ''}
+                                        onChange={(e) => handleConfigChange(selectedNode.id, 'cronExpression', e.target.value)}
+                                    >
+                                        <option value="">Select pattern...</option>
+                                        <option value="0 9 * * *">Daily at 9:00 AM</option>
+                                        <option value="0 9 * * 1">Weekly (Monday 9:00 AM)</option>
+                                        <option value="0 9 1 * *">Monthly (1st day 9:00 AM)</option>
+                                    </select>
+                                    <small style={{ fontSize: '10px', color: '#64748b' }}>Cron expression: {selectedNode.data.config?.cronExpression || 'Not set'}</small>
+                                </div>
+                            )}
+
+                            {renderConfigField(selectedNode.id, 'recipients', selectedNode.data.config?.recipients, 'textarea')}
+                            <small style={{ fontSize: '10px', color: '#64748b' }}>Enter emails (comma-separated)</small>
+                        </div>
+                    )}
+
+                    {!['emailDiscovery', 'emailSending', 'scheduledEmail'].includes(selectedNode.type) && (
                         <p style={{ fontSize: '12px', color: '#64748b' }}>Generic configuration for this node type is coming soon.</p>
                     )}
                 </div>

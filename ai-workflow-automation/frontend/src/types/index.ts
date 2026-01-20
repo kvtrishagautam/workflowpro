@@ -11,7 +11,7 @@ export interface NodeData {
 
 export interface NodeProps {
     id: string;
-    type: 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay' | 'emailDiscovery' | 'emailSending';
+    type: 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay' | 'emailDiscovery' | 'emailSending' | 'scheduledEmail';
     data: NodeData;
     position: NodePosition;
 }
@@ -45,11 +45,12 @@ export const NODE_TYPES = {
     DELAY: 'delay',
     EMAIL_DISCOVERY: 'emailDiscovery',
     EMAIL_SENDING: 'emailSending',
+    SCHEDULED_EMAIL: 'scheduledEmail',
 };
 
 // Node configuration interface
 export interface NodeConfig {
-    type: 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay' | 'emailDiscovery' | 'emailSending';
+    type: 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay' | 'emailDiscovery' | 'emailSending' | 'scheduledEmail';
     label: string;
     icon: string;
     color: string;

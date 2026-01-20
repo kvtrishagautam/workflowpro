@@ -1,0 +1,25 @@
+[
+    {
+        "name": "Marketing Team",
+        "emails": [
+            "alice@example.com",
+            "bob@example.com",
+            "charlie@example.com"
+        ]
+    },
+    {
+        "name": "Sales Team",
+        "emails": [
+            "diana@example.com",
+            "eve@example.com"
+        ]
+    },
+    {
+        "name": "Development Team",
+        "emails": [
+            "frank@example.com",
+            "grace@example.com",
+            "henry@example.com"
+        ]
+    }
+]

@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 import { nodeRegistry } from './services/nodeRegistry';
 import { emailDiscoveryNode } from './nodes/emailDiscovery';
 import { emailSendingNode } from './nodes/emailSending';
+import { scheduledEmailNode } from './nodes/scheduledEmailNode';
 import {
     webhookNode,
     javascriptNode,
@@ -12,6 +13,10 @@ import {
     conditionalNode,
     delayNode
 } from './nodes/foundationNodes';
+import { jobScheduler } from './services/jobScheduler';
+import { recipientGroupService } from './services/recipientGroupService';
+import { deliveryLogger } from './services/deliveryLogger';
+import { initializeDatabase } from './services/supabaseClient';
 
 // Load environment variables
 dotenv.config();
@@ -24,10 +29,22 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Initialize database and job scheduler
+(async () => {
+    try {
+        await initializeDatabase();
+        await jobScheduler.initializeScheduler();
+        console.log('✅ Database and scheduler initialized');
+    } catch (error) {
+        console.error('❌ Failed to initialize:', error);
+    }
+})();
+
 // Register all nodes
 console.log('Registering nodes...');
 nodeRegistry.register(emailDiscoveryNode);
 nodeRegistry.register(emailSendingNode);
+nodeRegistry.register(scheduledEmailNode);
 nodeRegistry.register(webhookNode);
 nodeRegistry.register(javascriptNode);
 nodeRegistry.register(slackNode);
@@ -137,6 +154,110 @@ app.post('/api/workflows/execute', async (req, res) => {
         res.json({ status: 'success', results });
     } catch (error: any) {
         console.error('Workflow execution error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Scheduled Jobs API Endpoints
+app.get('/api/scheduled-jobs', async (req, res) => {
+    try {
+        const { status } = req.query;
+        const jobs = await jobScheduler.getScheduledJobs(status as any);
+        res.json({ jobs });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/scheduled-jobs/:jobId', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const job = await jobScheduler.getJobById(jobId);
+
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        res.json({ job });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/scheduled-jobs/:jobId/cancel', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        await jobScheduler.cancelJob(jobId);
+        res.json({ message: 'Job cancelled successfully' });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Recipient Groups API Endpoints
+app.get('/api/recipient-groups', async (req, res) => {
+    try {
+        const groups = await recipientGroupService.getAllGroups();
+        res.json({ groups });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/recipient-groups', async (req, res) => {
+    try {
+        const { name, emails } = req.body;
+
+        if (!name || !emails || !Array.isArray(emails)) {
+            return res.status(400).json({ error: 'Invalid input: name and emails array required' });
+        }
+
+        const group = await recipientGroupService.createGroup(name, emails);
+        res.json({ group });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/recipient-groups/:groupId', async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const { name, emails } = req.body;
+
+        const group = await recipientGroupService.updateGroup(groupId, { name, emails });
+        res.json({ group });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/recipient-groups/:groupId', async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        await recipientGroupService.deleteGroup(groupId);
+        res.json({ message: 'Group deleted successfully' });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delivery Logs API Endpoints
+app.get('/api/delivery-logs', async (req, res) => {
+    try {
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+        const logs = await deliveryLogger.getAllLogs(limit);
+        res.json({ logs });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/delivery-logs/:jobId', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const logs = await deliveryLogger.getJobLogs(jobId);
+        res.json({ logs });
+    } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });

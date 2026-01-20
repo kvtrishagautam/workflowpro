@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ScheduledEmailJob {
+  id                String   @id @default(uuid())
+  subject           String
+  body              String   // HTML content
+  recipients        String   // JSON array of emails
+  recipientGroupId  String?
+  scheduledDateTime DateTime?
+  cronExpression    String?  // For recurring jobs
+  scheduleType      String   // 'one-time' or 'recurring'
+  status            String   // 'scheduled', 'sent', 'failed', 'cancelled'
+  personalizationCSV String? // Path to uploaded CSV file
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  executedAt        DateTime?
+  errorMessage      String?
+  
+  deliveryLogs      DeliveryLog[]
+  recipientGroup    RecipientGroup? @relation(fields: [recipientGroupId], references: [id])
+}
+
+model RecipientGroup {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  emails    String   // JSON array
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  jobs      ScheduledEmailJob[]
+}
+
+model DeliveryLog {
+  id        String   @id @default(uuid())
+  jobId     String
+  recipient String
+  status    String   // 'sent', 'failed'
+  messageId String?
+  error     String?
+  timestamp DateTime @default(now())
+  
+  job       ScheduledEmailJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}

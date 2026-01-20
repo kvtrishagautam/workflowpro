@@ -71,6 +71,13 @@ const nodeOptions: NodeOption[] = [
         description: 'Send automated emails',
         color: '#10B981',
     },
+    {
+        type: NODE_TYPES.SCHEDULED_EMAIL,
+        icon: '📅',
+        label: 'Scheduled Email',
+        description: 'Send emails at scheduled time',
+        color: '#F59E0B',
+    },
 ];
 
 const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
