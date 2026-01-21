@@ -6,25 +6,45 @@
     border-radius: 12px;
     box-shadow:
         0 4px 12px rgba(15, 23, 42, 0.08),
+        0 2px 4px rgba(15, 23, 42, 0.04),
         inset 0 1px 2px rgba(255, 255, 255, 0.5);
     cursor: move;
     user-select: none;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: visible;
 }
 
 .workflow-node:hover {
     box-shadow:
         0 6px 16px rgba(15, 23, 42, 0.12),
+        0 4px 8px rgba(15, 23, 42, 0.06),
         inset 0 1px 2px rgba(255, 255, 255, 0.5);
     transform: translateY(-2px);
+    border-color: #7c3aed;
 }
 
 .workflow-node.selected {
     box-shadow:
         0 8px 24px rgba(124, 58, 237, 0.25),
+        0 4px 12px rgba(124, 58, 237, 0.15),
         inset 0 1px 2px rgba(255, 255, 255, 0.5);
     border-color: #7c3aed;
+    animation: node-selected-pulse 2s ease-in-out infinite;
+}
+
+@keyframes node-selected-pulse {
+    0%, 100% {
+        box-shadow:
+            0 8px 24px rgba(124, 58, 237, 0.25),
+            0 4px 12px rgba(124, 58, 237, 0.15),
+            inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
+    50% {
+        box-shadow:
+            0 12px 32px rgba(124, 58, 237, 0.35),
+            0 6px 16px rgba(124, 58, 237, 0.25),
+            inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
 }
 
 .node-header {
@@ -87,41 +107,323 @@
     border-top: 1px solid #e2e8f0;
 }
 
+.node-config label {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.node-config input,
+.node-config select {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #0f172a;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.node-config input:focus,
+.node-config select:focus {
+    outline: none;
+    border-color: #60A5FA;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
 .config-item {
     font-size: 11px;
     color: #64748b;
     font-family: 'Monaco', 'Courier New', monospace;
 }
 
+/* Webhook URL Display */
+.webhook-url-display {
+    margin-top: 8px;
+}
+
+.url-container {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.url-container input {
+    flex: 1;
+    font-size: 11px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.copy-btn {
+    padding: 6px 10px;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+/* Webhook Config Preview Styles */
+.webhook-config-preview {
+    padding: 8px 0 0 0;
+}
+
+.webhook-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.webhook-method-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: white;
+    background: #22c55e;
+}
+
+.webhook-method-badge[data-method="GET"] {
+    background: #22c55e;
+}
+
+.webhook-method-badge[data-method="POST"] {
+    background: #3b82f6;
+}
+
+.webhook-method-badge[data-method="PUT"] {
+    background: #f59e0b;
+}
+
+.webhook-method-badge[data-method="DELETE"] {
+    background: #ef4444;
+}
+
+.webhook-method-badge[data-method="PATCH"] {
+    background: #8b5cf6;
+}
+
+.webhook-method-badge[data-method="HEAD"] {
+    background: #6b7280;
+}
+
+.webhook-path-preview {
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.webhook-quick-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.info-badge {
+    padding: 2px 6px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #64748b;
+}
+
+.info-badge.auth {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.info-badge.response {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.webhook-url-preview {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.webhook-url-preview input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    background: #f8fafc;
+    color: #64748b;
+    min-width: 0;
+}
+
+.copy-btn-small {
+    padding: 6px 8px;
+    background: #7c3aed;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.copy-btn-small:hover {
+    background: #6d28d9;
+    transform: scale(1.05);
+}
+
+.configure-webhook-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.configure-webhook-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Generic Node Config Summary */
+.node-config-summary {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.config-summary-item {
+    display: flex;
+    gap: 4px;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.config-summary-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.config-summary-value {
+    color: #0f172a;
+    font-family: 'Monaco', 'Courier New', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.configure-node-btn {
+    width: 100%;
+    padding: 8px 12px;
+    margin-top: 8px;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.configure-node-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
 /* Connection Points (Handles) */
 .node-connector {
     position: absolute;
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     background: white;
     border: 2px solid #60A5FA;
     border-radius: 50%;
     cursor: crosshair;
     transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.node-connector::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: transparent;
 }
 
 .node-connector:hover {
-    width: 16px;
-    height: 16px;
-    background: #60A5FA;
-    box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+    border-color: #7c3aed;
+    box-shadow: 0 0 16px rgba(124, 58, 237, 0.8), 0 0 32px rgba(124, 58, 237, 0.4);
+    transform: scale(1.3);
+    animation: connector-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes connector-pulse {
+    0%, 100% {
+        box-shadow: 0 0 16px rgba(124, 58, 237, 0.8), 0 0 32px rgba(124, 58, 237, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(124, 58, 237, 1), 0 0 40px rgba(124, 58, 237, 0.6);
+    }
 }
 
 .input-connector {
     left: 50%;
     top: -8px;
     transform: translateX(-50%);
+    cursor: crosshair;
+}
+
+.input-connector:hover {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    border-color: #10b981;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.8), 0 0 32px rgba(16, 185, 129, 0.4);
 }
 
 .output-connector {
     left: 50%;
     bottom: -8px;
     transform: translateX(-50%);
+    cursor: crosshair;
+}
+
+.output-connector:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    border-color: #f59e0b;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.8), 0 0 32px rgba(245, 158, 11, 0.4);
 }
 
 /* Context Menu */

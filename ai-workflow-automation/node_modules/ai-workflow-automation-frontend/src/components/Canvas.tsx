@@ -1,24 +1,61 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Workflow, NodeProps, Edge } from '../types';
+import React, { useRef, useState } from 'react';
+import { Workflow, NodeProps } from '../types';
 import WorkflowNode from './WorkflowNode';
 import './Canvas.css';
-
-type NodeType = 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay';
 
 type CanvasProps = {
     workflow?: Workflow | null;
     onWorkflowChange?: (workflow: Workflow) => void;
+    onOpenWebhookConfig?: (node: NodeProps) => void;
+    onOpenNodeConfig?: (node: NodeProps) => void;
 };
 
-const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
+const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebhookConfig, onOpenNodeConfig }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [draggedNode, setDraggedNode] = useState<string | null>(null);
+    const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStart, setConnectionStart] = useState<string | null>(null);
     const [connectionEnd, setConnectionEnd] = useState<{ x: number; y: number } | null>(null);
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
+    const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+    const [isPanning, setIsPanning] = useState(false);
+    const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
+    const [spacePressed, setSpacePressed] = useState(false);
+
+    // Keyboard shortcuts
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                setSpacePressed(true);
+            }
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedEdge) {
+                    e.preventDefault();
+                    handleEdgeDelete(selectedEdge);
+                }
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === ' ') {
+                setSpacePressed(false);
+                setIsPanning(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [selectedEdge]);
 
     if (!workflow) {
         return <div className="canvas empty">No workflow loaded</div>;
@@ -26,6 +63,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
 
     const handleNodeSelect = (nodeId: string) => {
         setSelectedNodeId(nodeId);
+        setSelectedEdge(null);
     };
 
     const handleNodeDelete = (nodeId: string) => {
@@ -40,10 +78,91 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
 
         onWorkflowChange?.(updated);
         setSelectedNodeId(null);
+        setSelectedEdge(null);
     };
 
-    const handleNodeDragStart = (e: React.DragEvent, nodeId: string) => {
+    const handleEdgeDelete = (edgeId: string) => {
+        const updatedEdges = workflow.edges.filter((e) => e.id !== edgeId);
+        const updated = {
+            ...workflow,
+            edges: updatedEdges,
+        };
+        onWorkflowChange?.(updated);
+        setSelectedEdge(null);
+        setHoveredEdge(null);
+    };
+
+    // Node dragging with MouseEvent
+    const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+        e.stopPropagation();
+        const node = workflow.nodes.find((n) => n.id === nodeId);
+        if (!node) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+        const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+
         setDraggedNode(nodeId);
+        setDragOffset({
+            x: mouseX - node.position.x,
+            y: mouseY - node.position.y,
+        });
+    };
+
+    // Connector click to start connection
+    const handleConnectorMouseDown = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => {
+        e.stopPropagation();
+
+        // Only allow connections from output connectors
+        if (connectorType === 'output') {
+            setIsConnecting(true);
+            setConnectionStart(nodeId);
+
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const node = workflow.nodes.find((n) => n.id === nodeId);
+            if (!node) return;
+
+            const nodeDims = getNodeDimensions(nodeId);
+            const x = node.position.x + nodeDims.width / 2;
+            const y = node.position.y + nodeDims.height;
+            setConnectionEnd({ x, y });
+        }
+    };
+
+    // Connector mouse up to complete connection
+    const handleConnectorMouseUp = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => {
+        e.stopPropagation();
+
+        if (isConnecting && connectionStart && connectorType === 'input' && connectionStart !== nodeId) {
+            // Check if edge already exists
+            const edgeExists = workflow.edges.some(
+                (edge) => edge.source === connectionStart && edge.target === nodeId
+            );
+
+            if (!edgeExists) {
+                const newEdge = {
+                    id: `edge_${Date.now()}`,
+                    source: connectionStart,
+                    target: nodeId,
+                };
+
+                const updated = {
+                    ...workflow,
+                    edges: [...workflow.edges, newEdge],
+                };
+
+                onWorkflowChange?.(updated);
+            }
+        }
+
+        setIsConnecting(false);
+        setConnectionStart(null);
+        setConnectionEnd(null);
     };
 
     const handleCanvasDragOver = (e: React.DragEvent) => {
@@ -63,12 +182,19 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
         const x = (e.clientX - rect.left - pan.x) / zoom;
         const y = (e.clientY - rect.top - pan.y) / zoom;
 
+        let config: Record<string, any> = {};
+        if (nodeType === 'webhook') {
+            config = { path: '/example-webhook', method: 'POST' };
+        } else if (nodeType === 'delay') {
+            config = { duration: 10, unit: 'seconds' };
+        }
+
         const newNode: any = {
             id: `node_${Date.now()}`,
             type: nodeType,
             data: {
                 label: `${nodeType} Node`,
-                config: {},
+                config,
             },
             position: { x: Math.max(0, x), y: Math.max(0, y) },
         };
@@ -82,19 +208,37 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
     };
 
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
-        if (draggedNode && e.buttons === 1) {
+        // Handle canvas panning (with space or middle mouse button)
+        if (isPanning && panStart && (spacePressed || e.buttons === 4)) {
+            const dx = e.clientX - panStart.x;
+            const dy = e.clientY - panStart.y;
+            setPan(prev => ({
+                x: prev.x + dx,
+                y: prev.y + dy,
+            }));
+            setPanStart({ x: e.clientX, y: e.clientY });
+            return;
+        }
+
+        // Handle node dragging
+        if (draggedNode && e.buttons === 1 && !spacePressed) {
             const canvas = canvasRef.current;
             if (!canvas) return;
 
-            const node = workflow.nodes.find((n) => n.id === draggedNode);
-            if (!node) return;
-
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left - pan.x) / zoom;
-            const y = (e.clientY - rect.top - pan.y) / zoom;
+            const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+            const mouseY = (e.clientY - rect.top - pan.y) / zoom;
 
             const updatedNodes = workflow.nodes.map((n) =>
-                n.id === draggedNode ? { ...n, position: { x: Math.max(0, x), y: Math.max(0, y) } } : n
+                n.id === draggedNode
+                    ? {
+                        ...n,
+                        position: {
+                            x: Math.max(0, mouseX - dragOffset.x),
+                            y: Math.max(0, mouseY - dragOffset.y),
+                        },
+                    }
+                    : n
             );
 
             const updated = {
@@ -105,6 +249,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
             onWorkflowChange?.(updated);
         }
 
+        // Handle connection preview
         if (isConnecting && connectionStart) {
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -122,6 +267,20 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
         setIsConnecting(false);
         setConnectionStart(null);
         setConnectionEnd(null);
+        setIsPanning(false);
+        setPanStart(null);
+    };
+
+    const handleCanvasMouseDown = (e: React.MouseEvent) => {
+        // Start panning with space + left click or middle mouse button
+        if (spacePressed || e.button === 1) {
+            e.preventDefault();
+            setIsPanning(true);
+            setPanStart({ x: e.clientX, y: e.clientY });
+        } else {
+            // Deselect edge when clicking on empty canvas
+            setSelectedEdge(null);
+        }
     };
 
     const handleMouseWheel = (e: React.WheelEvent) => {
@@ -147,14 +306,39 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
         setZoom(newZoom);
     };
 
+    // Helper function to get node dimensions
+    const getNodeDimensions = (nodeId: string) => {
+        const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`);
+        if (nodeElement) {
+            const rect = nodeElement.getBoundingClientRect();
+            return {
+                width: rect.width / zoom,
+                height: rect.height / zoom,
+            };
+        }
+        // Default dimensions if element not found
+        return { width: 220, height: 200 };
+    };
+
+    // Node config update handler
+    const handleNodeUpdate = (nodeId: string, updatedNode: NodeProps) => {
+        const updatedNodes = workflow.nodes.map((n) => (n.id === nodeId ? updatedNode : n));
+        const updated = {
+            ...workflow,
+            nodes: updatedNodes,
+        };
+        onWorkflowChange?.(updated);
+    };
+
     return (
         <div
-            className="canvas"
+            className={`canvas ${spacePressed ? 'panning-mode' : ''}`}
             ref={canvasRef}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
+            onMouseDown={handleCanvasMouseDown}
             onMouseLeave={handleCanvasMouseUp}
             onWheel={handleMouseWheel}
         >
@@ -184,7 +368,12 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
                             isSelected={selectedNodeId === node.id}
                             onSelect={handleNodeSelect}
                             onDelete={handleNodeDelete}
-                            onDragStart={handleNodeDragStart}
+                            onMouseDown={handleNodeMouseDown}
+                            onConnectorMouseDown={handleConnectorMouseDown}
+                            onConnectorMouseUp={handleConnectorMouseUp}
+                            onUpdate={handleNodeUpdate}
+                            onOpenWebhookConfig={onOpenWebhookConfig}
+                            onOpenNodeConfig={onOpenNodeConfig}
                         />
                     ))}
                 </div>
@@ -192,8 +381,55 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
                 {/* Connections SVG Layer */}
                 <svg
                     className="connections-layer"
-                    style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+                    style={{ width: '100%', height: '100%', overflow: 'visible' }}
                 >
+                    <defs>
+                        {/* Arrow marker for connection endpoints */}
+                        <marker
+                            id="arrowhead"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="8"
+                            refY="3"
+                            orient="auto"
+                            markerUnits="strokeWidth"
+                        >
+                            <path d="M0,0 L0,6 L9,3 z" fill="#7c3aed" />
+                        </marker>
+                        <marker
+                            id="arrowhead-hover"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="8"
+                            refY="3"
+                            orient="auto"
+                            markerUnits="strokeWidth"
+                        >
+                            <path d="M0,0 L0,6 L9,3 z" fill="#a78bfa" />
+                        </marker>
+                        <marker
+                            id="arrowhead-selected"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="8"
+                            refY="3"
+                            orient="auto"
+                            markerUnits="strokeWidth"
+                        >
+                            <path d="M0,0 L0,6 L9,3 z" fill="#c084fc" />
+                        </marker>
+                        <marker
+                            id="arrowhead-preview"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="8"
+                            refY="3"
+                            orient="auto"
+                            markerUnits="strokeWidth"
+                        >
+                            <path d="M0,0 L0,6 L9,3 z" fill="#a78bfa" opacity="0.6" />
+                        </marker>
+                    </defs>
                     {/* Render existing edges */}
                     {workflow.edges.map((edge) => {
                         const sourceNode = workflow.nodes.find((n) => n.id === edge.source);
@@ -201,27 +437,87 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
 
                         if (!sourceNode || !targetNode) return null;
 
-                        const x1 = sourceNode.position.x + 110;
-                        const y1 = sourceNode.position.y + 100;
-                        const x2 = targetNode.position.x + 110;
+                        // Get actual node dimensions
+                        const sourceDims = getNodeDimensions(sourceNode.id);
+                        const targetDims = getNodeDimensions(targetNode.id);
+
+                        // Calculate connection points
+                        // Output connector is at the bottom center of the source node
+                        const x1 = sourceNode.position.x + sourceDims.width / 2;
+                        const y1 = sourceNode.position.y + sourceDims.height;
+                        // Input connector is at the top center of the target node
+                        const x2 = targetNode.position.x + targetDims.width / 2;
                         const y2 = targetNode.position.y;
 
+                        // Calculate control points for smooth bezier curve
+                        const distance = Math.abs(y2 - y1);
+                        const curveStrength = Math.min(distance * 0.6, 200);
+                        const cx1 = x1;
+                        const cy1 = y1 + curveStrength;
+                        const cx2 = x2;
+                        const cy2 = y2 - curveStrength;
+
+                        const path = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+
+                        const isHovered = hoveredEdge === edge.id;
+                        const isSelected = selectedEdge === edge.id;
+
                         return (
-                            <path
-                                key={edge.id}
-                                className="connection"
-                                d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
-                            />
+                            <g key={edge.id}>
+                                {/* Invisible wider path for easier hovering/clicking */}
+                                <path
+                                    d={path}
+                                    stroke="transparent"
+                                    strokeWidth="20"
+                                    fill="none"
+                                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                                    onMouseEnter={() => setHoveredEdge(edge.id)}
+                                    onMouseLeave={() => setHoveredEdge(null)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedEdge(edge.id);
+                                    }}
+                                />
+                                {/* Visible connection path */}
+                                <path
+                                    className={`connection ${
+                                        isSelected ? 'connection-selected' : isHovered ? 'connection-hover' : ''
+                                    }`}
+                                    d={path}
+                                    markerEnd={`url(#arrowhead${isSelected ? '-selected' : isHovered ? '-hover' : ''})`}
+                                    style={{ pointerEvents: 'none' }}
+                                />
+                            </g>
                         );
                     })}
 
-                    {/* Render connection being drawn */}
-                    {isConnecting && connectionStart && connectionEnd && (
-                        <path
-                            className="connection-preview"
-                            d={`M ${connectionEnd.x} ${connectionEnd.y} L ${connectionEnd.x} ${connectionEnd.y}`}
-                        />
-                    )}
+                    {/* Render connection preview */}
+                    {isConnecting && connectionStart && connectionEnd && (() => {
+                        const sourceNode = workflow.nodes.find((n) => n.id === connectionStart);
+                        if (!sourceNode) return null;
+
+                        const sourceDims = getNodeDimensions(sourceNode.id);
+                        const x1 = sourceNode.position.x + sourceDims.width / 2;
+                        const y1 = sourceNode.position.y + sourceDims.height;
+                        const x2 = connectionEnd.x;
+                        const y2 = connectionEnd.y;
+
+                        // Calculate control points for preview
+                        const distance = Math.abs(y2 - y1);
+                        const curveStrength = Math.min(distance * 0.6, 200);
+                        const cx1 = x1;
+                        const cy1 = y1 + curveStrength;
+                        const cx2 = x2;
+                        const cy2 = y2 - curveStrength;
+
+                        return (
+                            <path
+                                className="connection-preview"
+                                d={`M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`}
+                                markerEnd="url(#arrowhead-preview)"
+                            />
+                        );
+                    })()}
                 </svg>
             </div>
 
@@ -236,6 +532,17 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
 
             {/* Controls */}
             <div className="canvas-controls">
+                {selectedEdge && (
+                    <div className="edge-controls">
+                        <button
+                            onClick={() => handleEdgeDelete(selectedEdge)}
+                            className="delete-edge-btn"
+                            title="Delete Connection"
+                        >
+                            🗑️ Delete Connection
+                        </button>
+                    </div>
+                )}
                 <div className="zoom-controls">
                     <button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} title="Zoom Out">
                         −
@@ -244,7 +551,44 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange }) => {
                     <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} title="Zoom In">
                         +
                     </button>
+                    <button 
+                        onClick={() => {
+                            setZoom(1);
+                            setPan({ x: 0, y: 0 });
+                        }} 
+                        title="Reset View"
+                        className="reset-view-btn"
+                    >
+                        ⟲
+                    </button>
                 </div>
+            </div>
+            
+            {/* Canvas Info Overlay */}
+            <div className="canvas-info">
+                <div className="info-item">
+                    <span className="info-label">Nodes:</span>
+                    <span className="info-value">{workflow.nodes.length}</span>
+                </div>
+                <div className="info-item">
+                    <span className="info-label">Connections:</span>
+                    <span className="info-value">{workflow.edges.length}</span>
+                </div>
+            </div>
+            
+            {/* Keyboard Shortcuts Hint */}
+            <div className="canvas-hints">
+                <div className="hint-item">
+                    <kbd>Space</kbd> + Drag to Pan
+                </div>
+                <div className="hint-item">
+                    <kbd>Scroll</kbd> to Zoom
+                </div>
+                {selectedEdge && (
+                    <div className="hint-item highlight">
+                        <kbd>Del</kbd> to Delete Connection
+                    </div>
+                )}
             </div>
         </div>
     );

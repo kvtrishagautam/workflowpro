@@ -1,0 +1,160 @@
+{
+    "id": "test-comprehensive-workflow",
+    "name": "Comprehensive Test Workflow",
+    "description": "Tests multiple node types including HTTP, JavaScript, Set, Filter, and communication nodes",
+    "nodes": [
+        {
+            "id": "webhook-1",
+            "type": "webhook",
+            "data": {
+                "label": "Webhook Trigger",
+                "config": {
+                    "path": "/test-comprehensive"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "http-1",
+            "type": "http",
+            "data": {
+                "label": "Fetch Random User",
+                "config": {
+                    "method": "GET",
+                    "url": "https://jsonplaceholder.typicode.com/users/1"
+                }
+            },
+            "position": {
+                "x": 300,
+                "y": 100
+            }
+        },
+        {
+            "id": "set-1",
+            "type": "set",
+            "data": {
+                "label": "Transform Data",
+                "config": {
+                    "fields": [
+                        {
+                            "name": "userName",
+                            "value": "{{http.body.name}}"
+                        },
+                        {
+                            "name": "userEmail",
+                            "value": "{{http.body.email}}"
+                        },
+                        {
+                            "name": "processedAt",
+                            "value": "{{timestamp}}"
+                        }
+                    ]
+                }
+            },
+            "position": {
+                "x": 500,
+                "y": 100
+            }
+        },
+        {
+            "id": "javascript-1",
+            "type": "javascript",
+            "data": {
+                "label": "Process with Code",
+                "config": {
+                    "code": "// Access the data\nconst result = {\n  ...data,\n  greeting: `Hello ${data.userName}!`,\n  emailDomain: data.userEmail.split('@')[1],\n  processed: true\n};\n\nreturn result;"
+                }
+            },
+            "position": {
+                "x": 700,
+                "y": 100
+            }
+        },
+        {
+            "id": "conditional-1",
+            "type": "conditional",
+            "data": {
+                "label": "Check Email Domain",
+                "config": {
+                    "rule": {
+                        "field": "emailDomain",
+                        "operator": "contains",
+                        "value": "example"
+                    }
+                }
+            },
+            "position": {
+                "x": 900,
+                "y": 100
+            }
+        },
+        {
+            "id": "slack-1",
+            "type": "slack",
+            "data": {
+                "label": "Send to Slack",
+                "config": {
+                    "message": "New user from example.com: {{userName}} ({{userEmail}})",
+                    "webhookUrl": ""
+                }
+            },
+            "position": {
+                "x": 1100,
+                "y": 50
+            }
+        },
+        {
+            "id": "email-1",
+            "type": "email",
+            "data": {
+                "label": "Send Email",
+                "config": {
+                    "to": "admin@example.com",
+                    "subject": "User Registration: {{userName}}",
+                    "body": "Hello,\n\nA new user {{userName}} registered with email {{userEmail}}.\n\nGreeting: {{greeting}}"
+                }
+            },
+            "position": {
+                "x": 1100,
+                "y": 150
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "webhook-1",
+            "target": "http-1"
+        },
+        {
+            "id": "e2-3",
+            "source": "http-1",
+            "target": "set-1"
+        },
+        {
+            "id": "e3-4",
+            "source": "set-1",
+            "target": "javascript-1"
+        },
+        {
+            "id": "e4-5",
+            "source": "javascript-1",
+            "target": "conditional-1"
+        },
+        {
+            "id": "e5-6",
+            "source": "conditional-1",
+            "target": "slack-1",
+            "sourceHandle": "true"
+        },
+        {
+            "id": "e5-7",
+            "source": "conditional-1",
+            "target": "email-1",
+            "sourceHandle": "false"
+        }
+    ]
+}
