@@ -471,14 +471,14 @@ const TelegramConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                 />
             </div>
 
-            {config.operation === 'sendMessage' && (
+            {(config.operation === 'sendMessage' || !config.operation) && (
                 <>
                     <div className="form-group">
                         <label>Message</label>
                         <textarea
                             value={config.message || ''}
                             onChange={(e) => updateConfig('message', e.target.value)}
-                            placeholder="Your message here..."
+                            placeholder="Your message here... Use {{variableName}} for dynamic data"
                             rows={4}
                         />
                     </div>
@@ -1048,11 +1048,18 @@ const OpenAIConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                         </>
                     ) : (
                         <>
-                            <option value="gpt-4">GPT-4</option>
-                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-4o-mini">GPT-4o Mini</option>
-                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            <optgroup label="🔓 Free Models (Gemini)">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (FREE - Recommended)</option>
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash (FREE)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (FREE)</option>
+                            </optgroup>
+                            <optgroup label="💳 OpenAI Models (Paid)">
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </optgroup>
                         </>
                     )}
                 </select>
@@ -1723,13 +1730,13 @@ function getCredentialFields(nodeType: string): { key: string; label: string; ty
             return [{ key: 'telegramBotToken', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...', helpText: 'Get from @BotFather' }];
         case NODE_TYPES.WHATSAPP:
             return [
-                { key: 'whatsappToken', label: 'Access Token', type: 'password', helpText: 'From Meta Business Suite' },
-                { key: 'whatsappPhoneNumberId', label: 'Phone Number ID', placeholder: '123456789012345' },
+                { key: 'apiToken', label: 'Access Token', type: 'password', placeholder: 'EAAxxxxxxxxxx', helpText: 'From Meta Business Suite > WhatsApp > API Setup' },
+                { key: 'phoneNumberId', label: 'Phone Number ID', placeholder: '123456789012345', helpText: 'Found in WhatsApp Business API settings' },
             ];
         case NODE_TYPES.OPENAI:
             return [{ key: 'openaiApiKey', label: 'API Key', type: 'password', placeholder: 'sk-...', helpText: 'From OpenAI dashboard' }];
         case NODE_TYPES.GOOGLE_SHEETS:
-            return [{ key: 'googleServiceAccount', label: 'Service Account JSON', type: 'password', helpText: 'Paste entire JSON key file' }];
+            return [{ key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'ya29.a0...', helpText: 'OAuth2 access token from Google OAuth Playground (https://developers.google.com/oauthplayground)' }];
         case NODE_TYPES.AIRTABLE:
             return [{ key: 'airtableApiKey', label: 'API Key', type: 'password', helpText: 'Personal access token from Airtable' }];
         case NODE_TYPES.NOTION:

@@ -15,23 +15,32 @@ export function findWorkflowByWebhook(
     path: string,
     method: string
 ): Workflow | undefined {
+    // Normalize path: ensure it starts with /
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
     return [...workflows.values()].find((workflow) =>
         workflow.nodes.some((node) => {
             if (node.type !== 'webhook') return false;
 
+            // Support both React Flow structure (node.data.config) and direct structure (node.config)
+            const config = (node as any).data?.config || (node as any).config || {};
+
             // Support both old format (method) and new format (httpMethod)
-            const nodeMethod = node.config.httpMethod || node.config.method || 'POST';
-            const nodePath = node.config.path || '/';
+            const nodeMethod = config.httpMethod || config.method || 'POST';
+            let nodePath = config.path || '/';
+
+            // Normalize nodePath: ensure it starts with /
+            nodePath = nodePath.startsWith('/') ? nodePath : `/${nodePath}`;
 
             // Check for exact path match
-            if (nodePath === path && nodeMethod === method) {
+            if (nodePath === normalizedPath && nodeMethod === method) {
                 return true;
             }
 
             // Check for route parameter match (e.g., /:id matches /123)
             if (nodePath.includes(':')) {
                 const pathParts = nodePath.split('/');
-                const requestParts = path.split('/');
+                const requestParts = normalizedPath.split('/');
 
                 if (pathParts.length !== requestParts.length) return false;
 

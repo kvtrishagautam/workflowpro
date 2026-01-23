@@ -568,22 +568,162 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
  */
 async function executeWhatsApp(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
+    const operation = config.operation || 'sendMessage';
+    const phoneNumber = replaceVariables(config.phoneNumber || config.to || '', data);
     const message = replaceVariables(config.message || '', data);
-    const to = config.to || '';
 
-    console.log(`[WHATSAPP] Sending message to ${to}`);
-    console.log(`[WHATSAPP] Message: ${message}`);
+    // Get credentials
+    const apiToken = config.apiToken || '';
+    const phoneNumberId = config.phoneNumberId || '';
 
-    // Simulate WhatsApp send (requires WhatsApp Business API credentials)
-    return {
-        ...data,
-        whatsapp: {
-            status: 'simulated',
-            message,
-            to,
-            timestamp: Date.now(),
-        },
-    };
+    console.log(`[WHATSAPP] Operation: ${operation}, To: ${phoneNumber}`);
+
+    if (!apiToken || !phoneNumberId) {
+        console.warn('[WHATSAPP] Missing credentials (apiToken or phoneNumberId) - simulating send');
+        return {
+            ...data,
+            whatsapp: {
+                status: 'simulated',
+                operation,
+                message,
+                to: phoneNumber,
+                info: 'Configure API token and Phone Number ID in credentials to use real WhatsApp API',
+                timestamp: Date.now(),
+            },
+        };
+    }
+
+    if (!phoneNumber) {
+        throw new Error('WhatsApp phone number is required');
+    }
+
+    // Normalize phone number (remove non-numeric characters except +)
+    const normalizedPhone = phoneNumber.replace(/[^0-9+]/g, '').replace(/^\+/, '');
+
+    console.log(`[WHATSAPP] Normalized phone: ${normalizedPhone}`);
+
+    try {
+        const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+
+        let requestBody: any;
+
+        switch (operation) {
+            case 'sendMessage': {
+                if (!message) {
+                    throw new Error('Message content is required for sendMessage operation');
+                }
+
+                requestBody = {
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to: normalizedPhone,
+                    type: 'text',
+                    text: {
+                        preview_url: false,
+                        body: message
+                    }
+                };
+                break;
+            }
+
+            case 'sendTemplate': {
+                const templateName = config.templateName || 'hello_world';
+                const templateLanguage = config.templateLanguage || 'en';
+                const templateParams = config.templateParams || {};
+
+                console.log(`[WHATSAPP] Using template: ${templateName}`);
+
+                requestBody = {
+                    messaging_product: 'whatsapp',
+                    to: normalizedPhone,
+                    type: 'template',
+                    template: {
+                        name: templateName,
+                        language: {
+                            code: templateLanguage
+                        },
+                        components: Object.keys(templateParams).length > 0 ? [
+                            {
+                                type: 'body',
+                                parameters: Object.values(templateParams).map((val: any) => ({
+                                    type: 'text',
+                                    text: replaceVariables(String(val), data)
+                                }))
+                            }
+                        ] : []
+                    }
+                };
+                break;
+            }
+
+            case 'sendMedia': {
+                const mediaType = config.mediaType || 'image';
+                const mediaUrl = replaceVariables(config.mediaUrl || '', data);
+                const caption = replaceVariables(config.caption || '', data);
+
+                if (!mediaUrl) {
+                    throw new Error('Media URL is required for sendMedia operation');
+                }
+
+                console.log(`[WHATSAPP] Sending ${mediaType}: ${mediaUrl}`);
+
+                const mediaField: any = {
+                    link: mediaUrl
+                };
+
+                // Only add caption if provided and media type supports it
+                if (caption && ['image', 'video', 'document'].includes(mediaType)) {
+                    mediaField.caption = caption;
+                }
+
+                requestBody = {
+                    messaging_product: 'whatsapp',
+                    to: normalizedPhone,
+                    type: mediaType,
+                    [mediaType]: mediaField
+                };
+                break;
+            }
+
+            default:
+                throw new Error(`Unsupported WhatsApp operation: ${operation}`);
+        }
+
+        console.log(`[WHATSAPP] Sending request to WhatsApp API...`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = result.error?.message || result.error?.error_data?.details || response.statusText;
+            throw new Error(`WhatsApp API error: ${errorMessage}`);
+        }
+
+        console.log(`[WHATSAPP] Message sent successfully, ID: ${result.messages?.[0]?.id}`);
+
+        return {
+            ...data,
+            whatsapp: {
+                status: 'sent',
+                operation,
+                message,
+                to: phoneNumber,
+                messageId: result.messages?.[0]?.id,
+                timestamp: Date.now(),
+            },
+        };
+    } catch (error) {
+        console.error('[WHATSAPP] Error:', error);
+        throw new Error(`WhatsApp send failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 }
 
 /**
@@ -594,10 +734,16 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
     const operation = config.operation || 'chat';
     const apiKey = config.apiKey || '';
-    const prompt = replaceVariables(config.prompt || '', data);
+
+    // Support both new format (systemPrompt + userPrompt) and old format (prompt)
+    const systemPrompt = config.systemPrompt || '';
+    const userPrompt = replaceVariables(config.userPrompt || config.prompt || '', data);
 
     console.log(`[OPENAI] Operation: ${operation}`);
-    console.log(`[OPENAI] Prompt: ${prompt}`);
+    if (systemPrompt) {
+        console.log(`[OPENAI] System Prompt: ${systemPrompt.substring(0, 100)}...`);
+    }
+    console.log(`[OPENAI] User Prompt: ${userPrompt.substring(0, 100)}...`);
 
     if (!apiKey) {
         console.warn('[OPENAI] No API key configured - simulating response');
@@ -606,7 +752,8 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
             openai: {
                 status: 'simulated',
                 operation,
-                prompt,
+                systemPrompt,
+                userPrompt,
                 response: 'This is a simulated OpenAI response. Configure an API key to get real results.',
                 timestamp: Date.now(),
             },
@@ -615,6 +762,15 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
 
     try {
         if (operation === 'chat') {
+            // Build messages array with optional system message
+            const messages: Array<{ role: string; content: string }> = [];
+
+            if (systemPrompt) {
+                messages.push({ role: 'system', content: systemPrompt });
+            }
+
+            messages.push({ role: 'user', content: userPrompt });
+
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -623,19 +779,25 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
                 },
                 body: JSON.stringify({
                     model: config.model || 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: prompt }],
+                    messages,
                     temperature: config.temperature || 0.7,
                 }),
             });
 
             const result = await response.json();
 
+            if (!response.ok) {
+                const errorMessage = result.error?.message || response.statusText;
+                throw new Error(`OpenAI API error: ${errorMessage}`);
+            }
+
             return {
                 ...data,
                 openai: {
                     status: 'success',
                     operation,
-                    prompt,
+                    systemPrompt,
+                    userPrompt,
                     response: result.choices[0]?.message?.content || '',
                     usage: result.usage,
                     timestamp: Date.now(),
@@ -656,25 +818,207 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
  */
 async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
-    const operation = config.operation || 'read';
+    const operation = config.operation || 'append';
     const spreadsheetId = config.spreadsheetId || '';
-    const range = config.range || 'Sheet1!A1:Z100';
+    const sheetName = config.sheetName || 'Sheet1';
+    const range = config.range || 'A:Z';
+
+    // Get access token from credentials tab
+    const accessToken = config.accessToken || '';
 
     console.log(`[GOOGLE_SHEETS] Operation: ${operation}`);
-    console.log(`[GOOGLE_SHEETS] Spreadsheet: ${spreadsheetId}, Range: ${range}`);
+    console.log(`[GOOGLE_SHEETS] Spreadsheet: ${spreadsheetId}, Sheet: ${sheetName}`);
 
-    // Simulate Google Sheets operation (requires Google API credentials)
-    return {
-        ...data,
-        googleSheets: {
-            status: 'simulated',
-            operation,
-            spreadsheetId,
-            range,
-            data: operation === 'read' ? [['Header1', 'Header2'], ['Value1', 'Value2']] : null,
-            timestamp: Date.now(),
-        },
-    };
+    if (!accessToken) {
+        console.warn('[GOOGLE_SHEETS] No access token configured - simulating operation');
+        return {
+            ...data,
+            googleSheets: {
+                status: 'simulated',
+                operation,
+                spreadsheetId,
+                sheetName,
+                message: 'Configure access token in credentials to use real Google Sheets API',
+                timestamp: Date.now(),
+            },
+        };
+    }
+
+    if (!spreadsheetId) {
+        throw new Error('Google Sheets spreadsheet ID is required');
+    }
+
+    const baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+    try {
+        switch (operation) {
+            case 'append': {
+                // Prepare values - extract from data or use configured values
+                const values = config.values || extractRowFromData(data);
+
+                console.log(`[GOOGLE_SHEETS] Appending row:`, values);
+
+                const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}:append?valueInputOption=USER_ENTERED`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [values]
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Google Sheets API error: ${error.error?.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log(`[GOOGLE_SHEETS] Successfully appended ${result.updates?.updatedRows || 0} rows`);
+
+                return {
+                    ...data,
+                    googleSheets: {
+                        status: 'success',
+                        operation: 'append',
+                        spreadsheetId,
+                        sheetName,
+                        updatedRange: result.updates?.updatedRange,
+                        updatedRows: result.updates?.updatedRows,
+                        updatedColumns: result.updates?.updatedColumns,
+                        updatedCells: result.updates?.updatedCells,
+                        timestamp: Date.now(),
+                    }
+                };
+            }
+
+            case 'read': {
+                const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}`;
+
+                console.log(`[GOOGLE_SHEETS] Reading range: ${sheetName}!${range}`);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Google Sheets API error: ${error.error?.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log(`[GOOGLE_SHEETS] Successfully read ${result.values?.length || 0} rows`);
+
+                return {
+                    ...data,
+                    googleSheets: {
+                        status: 'success',
+                        operation: 'read',
+                        spreadsheetId,
+                        sheetName,
+                        values: result.values || [],
+                        range: result.range,
+                        rowCount: result.values?.length || 0,
+                        timestamp: Date.now(),
+                    }
+                };
+            }
+
+            case 'update': {
+                const values = config.values || extractRowFromData(data);
+
+                console.log(`[GOOGLE_SHEETS] Updating range: ${sheetName}!${range}`);
+
+                const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}?valueInputOption=USER_ENTERED`;
+
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [values]
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Google Sheets API error: ${error.error?.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log(`[GOOGLE_SHEETS] Successfully updated ${result.updatedRows || 0} rows`);
+
+                return {
+                    ...data,
+                    googleSheets: {
+                        status: 'success',
+                        operation: 'update',
+                        spreadsheetId,
+                        sheetName,
+                        updatedRange: result.updatedRange,
+                        updatedRows: result.updatedRows,
+                        updatedColumns: result.updatedColumns,
+                        updatedCells: result.updatedCells,
+                        timestamp: Date.now(),
+                    }
+                };
+            }
+
+            default:
+                throw new Error(`Unsupported Google Sheets operation: ${operation}`);
+        }
+    } catch (error) {
+        console.error('[GOOGLE_SHEETS] Error:', error);
+        throw new Error(`Google Sheets operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+/**
+ * Helper: Extract row data from workflow data for Google Sheets
+ */
+function extractRowFromData(data: any): any[] {
+    // If values are explicitly provided, use them
+    if (data.values && Array.isArray(data.values)) {
+        return data.values;
+    }
+
+    // Try to extract from webhook body
+    if (data.body && typeof data.body === 'object') {
+        const bodyValues = Object.values(data.body);
+        if (bodyValues.length > 0) {
+            return bodyValues;
+        }
+    }
+
+    // Try to extract from query params
+    if (data.query && typeof data.query === 'object') {
+        const queryValues = Object.values(data.query);
+        if (queryValues.length > 0) {
+            return queryValues;
+        }
+    }
+
+    // Extract from root level, excluding internal fields
+    const excludeKeys = ['googleSheets', 'openai', 'telegram', 'whatsapp', 'slack', 'discord', 'email', 'http', 'headers', 'params', 'method', 'path'];
+    const keys = Object.keys(data).filter(k => !excludeKeys.includes(k));
+
+    if (keys.length > 0) {
+        return keys.map(k => data[k]);
+    }
+
+    // Fallback: return empty array
+    return [];
 }
 
 // ============================================

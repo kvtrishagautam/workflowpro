@@ -1,0 +1,173 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                       🔧 FIX YOUR WORKFLOW IN 2 MINUTES                        ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+Current Status:
+  ❌ No data in Google Sheets
+  ❌ No message in Telegram
+
+Problem:
+  🔑 Google Sheets token expired (lasts only 1 hour)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 STEP-BY-STEP FIX:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ STEP 1: Get New Token (1 minute)                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. Open in browser:
+   https://developers.google.com/oauthplayground
+
+2. Left sidebar → Find "Google Sheets API v4"
+
+3. Check box: https://www.googleapis.com/auth/spreadsheets
+
+4. Click blue "Authorize APIs" button
+
+5. Sign in → Click "Allow"
+
+6. Click "Exchange authorization code for tokens"
+
+7. COPY the "Access token" (starts with ya29.)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ STEP 2: Update Workflow (1 minute)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. Open in browser:
+   http://localhost:3000
+
+2. Click the GOOGLE SHEETS node (blue/purple rectangle)
+
+3. Click "Credentials" tab
+
+4. PASTE the token in "Access Token" field
+
+5. Click "Apply Changes" button at bottom
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ STEP 3: Test (30 seconds)                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. Open test form:
+   file:///Users/ayshaharis/Documents/main-pro/workflow-pro/test-form.html
+
+2. Fill in all fields
+
+3. Click Submit
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ STEP 4: Verify (30 seconds)                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. Check Google Sheets:
+   https://docs.google.com/spreadsheets/d/1cuVHes-463GE6BqWbwdvmQhlNx7JGnFZ34BY7gAA-ec
+   → Should see new row
+
+2. Check Telegram app
+   → Should see message with AI analysis
+
+3. Check terminal where "npm start" is running
+   → Should see:
+     [GOOGLE_SHEETS] ✅ Row appended successfully
+     [GEMINI] ✅ Response received
+     [TELEGRAM] ✅ Message sent
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 WHAT'S HAPPENING:
+
+BEFORE FIX (Current):
+┌───────────┐
+│  Webhook  │ ✅ Working
+└─────┬─────┘
+      │
+      ▼
+┌─────────────────┐
+│ Google Sheets   │ ❌ TOKEN EXPIRED (401 Error)
+└─────────────────┘
+      │
+      ▼ ⛔ WORKFLOW STOPS HERE
+
+┌─────────────┐
+│  Gemini AI  │ ⏸️  Never reached
+└─────────────┘
+
+┌─────────────┐
+│     Set     │ ⏸️  Never reached
+└─────────────┘
+
+┌─────────────┐
+│  Telegram   │ ⏸️  Never reached
+└─────────────┘
+
+
+AFTER FIX:
+┌───────────┐
+│  Webhook  │ ✅ Receives form data
+└─────┬─────┘
+      │
+      ▼
+┌─────────────────┐
+│ Google Sheets   │ ✅ Saves data (with fresh token!)
+└─────┬───────────┘
+      │
+      ▼
+┌─────────────┐
+│  Gemini AI  │ ✅ Analyzes inquiry
+└─────┬───────┘
+      │
+      ▼
+┌─────────────┐
+│     Set     │ ✅ Formats message
+└─────┬───────┘
+      │
+      ▼
+┌─────────────┐
+│  Telegram   │ ✅ Sends notification 🎉
+└─────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 CHECKLIST:
+
+☐ Got new token from OAuth Playground
+☐ Pasted token in workflow editor
+☐ Clicked "Apply Changes"
+☐ Tested with test-form.html
+☐ Saw new row in Google Sheets
+☐ Saw message in Telegram
+
+When all checked ✅ → Ready for demo!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 WHY THIS HAPPENS:
+
+Google OAuth2 tokens expire after 1 HOUR for security.
+
+For your professor demo:
+  → Refresh token 5-10 minutes BEFORE demo
+  → Token will last the entire presentation (1 hour)
+  → Test once to verify everything works
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 QUICK TEST AFTER FIX:
+
+Run this command after refreshing token:
+
+  curl -X POST http://localhost:4000/webhook/form-submit \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Token Test","email":"test@test.com","phone":"1234567890","company":"Test","category":"Product Demo","budget":"$10,000+","message":"Testing","urgency":"High","timestamp":"2026-01-23T12:00:00.000Z"}'
+
+Then check:
+  1. Google Sheets for new row
+  2. Telegram for new message
+  3. Terminal logs for success
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ That's it! Fix the token and EVERYTHING will work! 🚀

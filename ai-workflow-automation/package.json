@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "concurrently \"pnpm --filter backend start\" \"pnpm --filter frontend start\"",
-    "build": "pnpm --filter backend build && pnpm --filter frontend build",
-    "test": "pnpm --filter backend test && pnpm --filter frontend test"
+    "start": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend start\"",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "test": "npm --prefix backend test && npm --prefix frontend test"
   },
   "devDependencies": {
-    "concurrently": "^6.0.0"
+    "concurrently": "^6.5.1"
   },
   "workspaces": [
     "frontend",
