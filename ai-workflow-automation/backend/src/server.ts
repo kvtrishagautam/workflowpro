@@ -1,48 +1,54 @@
-import express, { Application } from 'express';
+import express from 'express';
 import cors from 'cors';
-import { config } from './config/env';
-import { connectDatabase } from './config/database';
-import { errorHandler } from './middleware/error.middleware';
-import authRoutes from './routes/auth.routes';
-import workflowRoutes from './routes/workflow.routes';
+import bodyParser from 'body-parser';
+import webhookRoutes from './routes/webhookRoutes';
 
-const app: Application = express();
+const app = express();
+const PORT = 4000;
 
 // Middleware
-app.use(cors({ origin: config.frontendUrl }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/workflows', workflowRoutes);
-
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Request logging middleware
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.path}`);
+    next();
 });
 
-// Error handling
-app.use(errorHandler);
+// Routes
+app.use(webhookRoutes);
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        error: 'Not Found',
+        path: req.path,
+        message: 'The requested endpoint does not exist'
+    });
+});
+
+// Error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('❌ Server error:', err);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: err.message
+    });
+});
 
 // Start server
-const startServer = async () => {
-    try {
-        // Connect to database
-        await connectDatabase();
-
-        // Start listening
-        app.listen(config.port, () => {
-            console.log(`🚀 Server running on port ${config.port}`);
-            console.log(`📝 Environment: ${config.nodeEnv}`);
-            console.log(`🌐 Frontend URL: ${config.frontendUrl}`);
-        });
-    } catch (error) {
-        console.error('Failed to start server:', error);
-        process.exit(1);
-    }
-};
-
-startServer();
+app.listen(PORT, () => {
+    console.log('\n🚀 ========================================');
+    console.log(`   Webhook Backend Server Started`);
+    console.log('   ========================================');
+    console.log(`   📍 URL: http://localhost:${PORT}`);
+    console.log(`   🏥 Health: http://localhost:${PORT}/health`);
+    console.log(`   📝 Workflows: http://localhost:${PORT}/workflows`);
+    console.log(`   🔔 Webhooks: http://localhost:${PORT}/webhook/*`);
+    console.log('   ========================================\n');
+});
 
 export default app;

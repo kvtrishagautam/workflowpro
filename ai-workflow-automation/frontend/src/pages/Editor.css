@@ -114,6 +114,33 @@
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
+.run-button {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.run-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+.run-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.run-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .save-button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
@@ -195,6 +222,33 @@
     flex: 1;
     overflow: hidden;
     gap: 0;
+}
+
+/* Right Side Panel - Run History or Node Config */
+.editor-right-panel {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(20, 28, 48, 0.8) 100%);
+    border-left: 1px solid rgba(148, 163, 184, 0.2);
+    overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.editor-right-panel.webhook-mode,
+.editor-right-panel.config-mode {
+    width: 420px;
+    background: #ffffff;
+}
+
+/* Run History Panel - deprecated, use .editor-right-panel */
+.editor-runs-panel {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(20, 28, 48, 0.8) 100%);
+    border-left: 1px solid rgba(148, 163, 184, 0.2);
+    overflow: hidden;
 }
 
 /* Properties Panel */

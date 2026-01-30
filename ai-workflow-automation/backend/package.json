@@ -1,42 +1,48 @@
 {
-    "name": "workflow-automation-backend",
+    "name": "workflow-backend",
     "version": "1.0.0",
-    "description": "Backend API for workflow automation platform",
+    "description": "Webhook backend for AI workflow automation",
     "main": "dist/server.js",
     "scripts": {
-        "dev": "nodemon src/server.ts",
+        "dev": "ts-node src/server.ts",
         "build": "tsc",
-        "start": "node dist/server.js",
-        "test": "jest"
+        "start": "node dist/server.js"
     },
     "keywords": [
         "workflow",
-        "automation",
-        "api"
+        "webhook",
+        "automation"
     ],
     "author": "",
-    "license": "MIT",
+    "license": "ISC",
     "dependencies": {
-        "express": "^4.18.2",
-        "mongoose": "^8.0.3",
-        "dotenv": "^16.3.1",
-        "cors": "^2.8.5",
-        "bcryptjs": "^2.4.3",
-        "jsonwebtoken": "^9.0.2",
-        "axios": "^1.6.2",
+        "axios": "^1.4.0",
         "@slack/web-api": "^6.10.0",
-        "vm2": "^3.9.19",
-        "uuid": "^9.0.1"
+        "bcryptjs": "^2.4.3",
+        "body-parser": "^1.20.4",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.22.1",
+        "joi": "^17.9.2",
+        "jsonwebtoken": "^9.0.0",
+        "mongoose": "^7.0.0",
+        "uuid": "^9.0.0",
+        "vm2": "^3.9.19"
     },
     "devDependencies": {
-        "@types/express": "^4.17.21",
-        "@types/node": "^20.10.5",
-        "@types/cors": "^2.8.17",
-        "@types/bcryptjs": "^2.4.6",
-        "@types/jsonwebtoken": "^9.0.5",
-        "@types/uuid": "^9.0.7",
-        "typescript": "^5.3.3",
-        "nodemon": "^3.0.2",
-        "ts-node": "^10.9.2"
+        "@types/cors": "^2.8.19",
+        "@types/express": "^4.17.25",
+        "@types/jest": "^29.5.0",
+        "@types/jsonwebtoken": "^9.0.2",
+        "@types/node": "^20.19.27",
+        "@types/uuid": "^9.0.2",
+        "@typescript-eslint/eslint-plugin": "^5.59.0",
+        "@typescript-eslint/parser": "^5.59.0",
+        "eslint": "^8.40.0",
+        "jest": "^29.5.0",
+        "nodemon": "^2.0.22",
+        "ts-jest": "^29.1.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3"
     }
 }

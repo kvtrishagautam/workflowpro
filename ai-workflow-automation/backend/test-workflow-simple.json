@@ -1,0 +1,140 @@
+{
+    "id": "test-simple-workflow",
+    "name": "Simple Data Processing Workflow",
+    "description": "A simple workflow that fetches data, transforms it, and filters results",
+    "nodes": [
+        {
+            "id": "webhook-1",
+            "type": "webhook",
+            "data": {
+                "label": "Start",
+                "config": {
+                    "path": "/test-simple"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 200
+            }
+        },
+        {
+            "id": "http-1",
+            "type": "http",
+            "data": {
+                "label": "Fetch Posts",
+                "config": {
+                    "method": "GET",
+                    "url": "https://jsonplaceholder.typicode.com/posts"
+                }
+            },
+            "position": {
+                "x": 300,
+                "y": 200
+            }
+        },
+        {
+            "id": "javascript-1",
+            "type": "javascript",
+            "data": {
+                "label": "Process Posts",
+                "config": {
+                    "code": "// Get posts from HTTP response\nconst posts = data.http.body;\n\n// Process the posts\nconst items = posts.slice(0, 10).map(post => ({\n  id: post.id,\n  title: post.title,\n  titleLength: post.title.length,\n  shortTitle: post.title.substring(0, 20)\n}));\n\nreturn { ...data, items };"
+                }
+            },
+            "position": {
+                "x": 500,
+                "y": 200
+            }
+        },
+        {
+            "id": "filter-1",
+            "type": "filter",
+            "data": {
+                "label": "Filter Long Titles",
+                "config": {
+                    "mode": "keep",
+                    "conditions": [
+                        {
+                            "field": "titleLength",
+                            "operator": ">",
+                            "value": 30
+                        }
+                    ]
+                }
+            },
+            "position": {
+                "x": 700,
+                "y": 200
+            }
+        },
+        {
+            "id": "set-1",
+            "type": "set",
+            "data": {
+                "label": "Add Metadata",
+                "config": {
+                    "fields": [
+                        {
+                            "name": "processedAt",
+                            "value": "2026-01-20T12:00:00Z"
+                        },
+                        {
+                            "name": "totalItems",
+                            "value": "10"
+                        },
+                        {
+                            "name": "workflow",
+                            "value": "simple-test"
+                        }
+                    ]
+                }
+            },
+            "position": {
+                "x": 900,
+                "y": 200
+            }
+        },
+        {
+            "id": "discord-1",
+            "type": "discord",
+            "data": {
+                "label": "Log to Discord",
+                "config": {
+                    "message": "Processed {{totalItems}} items with titles longer than 30 characters",
+                    "webhookUrl": ""
+                }
+            },
+            "position": {
+                "x": 1100,
+                "y": 200
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "webhook-1",
+            "target": "http-1"
+        },
+        {
+            "id": "e2-3",
+            "source": "http-1",
+            "target": "javascript-1"
+        },
+        {
+            "id": "e3-4",
+            "source": "javascript-1",
+            "target": "filter-1"
+        },
+        {
+            "id": "e4-5",
+            "source": "filter-1",
+            "target": "set-1"
+        },
+        {
+            "id": "e5-6",
+            "source": "set-1",
+            "target": "discord-1"
+        }
+    ]
+}

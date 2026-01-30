@@ -1,0 +1,39 @@
+{
+    "id": "test-workflow-001",
+    "nodes": [
+        {
+            "id": "webhook-1",
+            "type": "webhook",
+            "config": {
+                "path": "/order-created",
+                "method": "POST"
+            }
+        },
+        {
+            "id": "delay-1",
+            "type": "delay",
+            "config": {
+                "duration": 2000
+            }
+        },
+        {
+            "id": "condition-1",
+            "type": "condition",
+            "config": {
+                "field": "amount",
+                "operator": "greaterThan",
+                "value": 50000
+            }
+        }
+    ],
+    "edges": [
+        {
+            "source": "webhook-1",
+            "target": "delay-1"
+        },
+        {
+            "source": "delay-1",
+            "target": "condition-1"
+        }
+    ]
+}
