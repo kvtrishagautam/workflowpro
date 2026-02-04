@@ -1,6 +1,7 @@
 import { WorkflowNode, NodeInput, NodeExecutionResult } from '../types/node';
 import * as https from 'https';
 import * as http from 'http';
+import { DiscoveredEmail } from '../models/DiscoveredEmail.model';
 
 /**
  * Email Discovery Node - Scrapes real email addresses from web pages
@@ -162,11 +163,6 @@ export const emailDiscoveryNode: WorkflowNode = {
     inputSchema: {
         type: 'object',
         properties: {
-            urls: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Direct URLs to scrape for emails'
-            },
             keywords: {
                 type: 'array',
                 items: { type: 'string' },
@@ -203,8 +199,9 @@ export const emailDiscoveryNode: WorkflowNode = {
     },
     execute: async (input: NodeInput): Promise<NodeExecutionResult> => {
         try {
-            console.log('[EmailDiscovery] Starting real email scraping...');
-            const urls = (input.urls as string[] | undefined) || [];
+            console.log('[EmailDiscovery] Starting keyword-based email discovery...');
+            console.log('[EmailDiscovery] Input received:', JSON.stringify(input, null, 2));
+
             const keywords = (input.keywords as string[] | undefined) || [];
             const targetDomains = input.targetDomains as string[] | undefined;
             const industry = input.industry as string | undefined;
@@ -217,33 +214,36 @@ export const emailDiscoveryNode: WorkflowNode = {
                 confidence_score: number;
             }> = [];
 
-            // Collect URLs to scrape
-            let urlsToScrape: string[] = [...urls];
-
-            // If keywords provided, search for relevant pages
-            if (keywords.length > 0) {
-                console.log(`[EmailDiscovery] Searching for pages with keywords: ${keywords.join(', ')}`);
-                const searchUrls = await searchForPages(keywords, industry);
-                urlsToScrape.push(...searchUrls);
-            }
-
-            // Remove duplicates
-            urlsToScrape = Array.from(new Set(urlsToScrape));
-
-            if (urlsToScrape.length === 0) {
-                console.log('[EmailDiscovery] No URLs to scrape. Please provide URLs or keywords.');
+            // Check if we have keywords or industry
+            if (keywords.length === 0 && !industry) {
+                console.log('[EmailDiscovery] No keywords or industry provided.');
                 return {
                     status: 'success',
                     data: {
                         emails: [],
-                        message: 'No URLs to scrape. Please provide direct URLs or keywords.'
+                        message: 'Please provide keywords or select an industry to discover emails.'
                     }
                 };
             }
 
-            console.log(`[EmailDiscovery] Scraping ${urlsToScrape.length} URLs...`);
+            // Search for relevant pages based on keywords/industry
+            console.log(`[EmailDiscovery] Searching for pages with keywords: ${keywords.join(', ')}, industry: ${industry || 'none'}`);
+            const urlsToScrape = await searchForPages(keywords, industry);
 
-            // Scrape each URL with better error handling
+            if (urlsToScrape.length === 0) {
+                console.log('[EmailDiscovery] No pages found to scrape.');
+                return {
+                    status: 'success',
+                    data: {
+                        emails: [],
+                        message: 'No relevant pages found for the given keywords/industry.'
+                    }
+                };
+            }
+
+            console.log(`[EmailDiscovery] Scraping ${urlsToScrape.length} pages...`);
+
+            // Scrape each URL with error handling
             let successfulScrapes = 0;
             let failedScrapes = 0;
 
@@ -265,7 +265,7 @@ export const emailDiscoveryNode: WorkflowNode = {
 
                             discoveredEmails.push({
                                 ...emailData,
-                                matched_keyword: matchedKeyword || 'direct_url'
+                                matched_keyword: matchedKeyword || industry || 'industry_search'
                             });
                         }
                     } else {
@@ -279,7 +279,6 @@ export const emailDiscoveryNode: WorkflowNode = {
             }
 
             console.log(`[EmailDiscovery] Scraping complete: ${successfulScrapes} successful, ${failedScrapes} failed`);
-
 
             // Filter by target domains if specified
             let filteredEmails = discoveredEmails;
@@ -299,6 +298,27 @@ export const emailDiscoveryNode: WorkflowNode = {
             const limitedEmails = uniqueEmails.slice(0, maxEmails);
 
             console.log(`[EmailDiscovery] Discovered ${limitedEmails.length} unique valid emails`);
+
+            // Save discovered emails to MongoDB
+            try {
+                const savedEmails = await Promise.all(
+                    limitedEmails.map(async (emailData) => {
+                        const discoveredEmail = new DiscoveredEmail({
+                            email: emailData.email,
+                            source_url: emailData.source_url,
+                            matched_keyword: emailData.matched_keyword,
+                            industry: industry,
+                            confidence_score: emailData.confidence_score,
+                            status: 'pending'
+                        });
+                        return await discoveredEmail.save();
+                    })
+                );
+                console.log(`[EmailDiscovery] Saved ${savedEmails.length} emails to database`);
+            } catch (dbError: any) {
+                console.error('[EmailDiscovery] Failed to save to database:', dbError.message);
+                // Continue execution even if database save fails
+            }
 
             return {
                 status: 'success',

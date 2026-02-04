@@ -77,7 +77,15 @@ export const emailSendingNode: WorkflowNode = {
             }
 
             if (recipients.length === 0) {
-                throw new Error('No recipients provided. Either "recipient" or "emails" array must be present.');
+                console.log('[EmailSending] No recipients found, skipping email send.');
+                return {
+                    status: 'success',
+                    data: {
+                        sentCount: 0,
+                        status: 'skipped',
+                        message: 'No recipients provided. Email sending skipped.'
+                    }
+                };
             }
 
             const transporter = createTransporter();

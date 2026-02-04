@@ -4,7 +4,7 @@ import * as dotenv from 'dotenv';
 import { nodeRegistry } from './services/nodeRegistry';
 import { emailDiscoveryNode } from './nodes/emailDiscovery';
 import { emailSendingNode } from './nodes/emailSending';
-import { scheduledEmailNode } from './nodes/scheduledEmailNode';
+import { scheduledEmailNode } from './nodes/scheduledEmail.node';
 import {
     webhookNode,
     javascriptNode,
@@ -13,10 +13,11 @@ import {
     conditionalNode,
     delayNode
 } from './nodes/foundationNodes';
-import { jobScheduler } from './services/jobScheduler';
-import { recipientGroupService } from './services/recipientGroupService';
-import { deliveryLogger } from './services/deliveryLogger';
-import { initializeDatabase } from './services/supabaseClient';
+import { connectToMongoDB } from './config/mongoClient';
+import { jobScheduler } from './services/jobScheduler.service';
+import { recipientGroupService } from './services/recipientGroup.service';
+import { deliveryLogger } from './services/deliveryLogger.service';
+import { DiscoveredEmail } from './models/DiscoveredEmail.model';
 
 // Load environment variables
 dotenv.config();
@@ -29,10 +30,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize database and job scheduler
+// Initialize MongoDB and job scheduler
 (async () => {
     try {
-        await initializeDatabase();
+        await connectToMongoDB();
         await jobScheduler.initializeScheduler();
         console.log('✅ Database and scheduler initialized');
     } catch (error) {
@@ -162,7 +163,7 @@ app.post('/api/workflows/execute', async (req, res) => {
 app.get('/api/scheduled-jobs', async (req, res) => {
     try {
         const { status } = req.query;
-        const jobs = await jobScheduler.getScheduledJobs(status as any);
+        const jobs = await jobScheduler.getScheduledJobs(status as string);
         res.json({ jobs });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
@@ -257,6 +258,73 @@ app.get('/api/delivery-logs/:jobId', async (req, res) => {
         const { jobId } = req.params;
         const logs = await deliveryLogger.getJobLogs(jobId);
         res.json({ logs });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Discovered Emails API Endpoints
+app.get('/api/discovered-emails', async (req, res) => {
+    try {
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+        const status = req.query.status as string | undefined;
+
+        const query = status ? { status } : {};
+        const emails = await DiscoveredEmail.find(query)
+            .sort({ discoveredAt: -1 })
+            .limit(limit);
+
+        res.json({
+            emails,
+            count: emails.length,
+            total: await DiscoveredEmail.countDocuments(query)
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/discovered-emails/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const email = await DiscoveredEmail.findById(id);
+        if (!email) {
+            return res.status(404).json({ error: 'Email not found' });
+        }
+        res.json({ email });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/discovered-emails/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await DiscoveredEmail.findByIdAndDelete(id);
+        if (!result) {
+            return res.status(404).json({ error: 'Email not found' });
+        }
+        res.json({ message: 'Email deleted successfully' });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/discovered-emails/stats/summary', async (req, res) => {
+    try {
+        const total = await DiscoveredEmail.countDocuments();
+        const pending = await DiscoveredEmail.countDocuments({ status: 'pending' });
+        const sent = await DiscoveredEmail.countDocuments({ status: 'sent' });
+        const failed = await DiscoveredEmail.countDocuments({ status: 'failed' });
+        const skipped = await DiscoveredEmail.countDocuments({ status: 'skipped' });
+
+        res.json({
+            total,
+            pending,
+            sent,
+            failed,
+            skipped
+        });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }

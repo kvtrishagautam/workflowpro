@@ -1,0 +1,185 @@
+{
+    "id": "test-api-workflow",
+    "name": "API Data Processing Pipeline",
+    "description": "Fetches data from an API, processes it, filters results, and sends notifications",
+    "nodes": [
+        {
+            "id": "webhook-start",
+            "type": "webhook",
+            "data": {
+                "label": "Webhook Trigger",
+                "config": {
+                    "path": "/api-pipeline"
+                }
+            },
+            "position": {
+                "x": 50,
+                "y": 200
+            }
+        },
+        {
+            "id": "fetch-users",
+            "type": "http",
+            "data": {
+                "label": "Fetch Users",
+                "config": {
+                    "method": "GET",
+                    "url": "https://jsonplaceholder.typicode.com/users"
+                }
+            },
+            "position": {
+                "x": 250,
+                "y": 200
+            }
+        },
+        {
+            "id": "process-users",
+            "type": "javascript",
+            "data": {
+                "label": "Process Users",
+                "config": {
+                    "code": "// Transform user data\nconst users = data.http.body;\n\nconst items = users.map(user => ({\n  id: user.id,\n  name: user.name,\n  email: user.email,\n  company: user.company.name,\n  city: user.address.city,\n  phone: user.phone,\n  emailScore: user.email.length // Simple scoring\n}));\n\nconsole.log(`Processed ${items.length} users`);\n\nreturn { ...data, items, totalUsers: items.length };"
+                }
+            },
+            "position": {
+                "x": 450,
+                "y": 200
+            }
+        },
+        {
+            "id": "filter-high-score",
+            "type": "filter",
+            "data": {
+                "label": "Filter High Score Users",
+                "config": {
+                    "mode": "keep",
+                    "conditions": [
+                        {
+                            "field": "emailScore",
+                            "operator": ">",
+                            "value": 20
+                        }
+                    ]
+                }
+            },
+            "position": {
+                "x": 650,
+                "y": 200
+            }
+        },
+        {
+            "id": "add-metadata",
+            "type": "set",
+            "data": {
+                "label": "Add Metadata",
+                "config": {
+                    "fields": [
+                        {
+                            "name": "processedAt",
+                            "value": "2026-01-20T12:00:00Z"
+                        },
+                        {
+                            "name": "pipeline",
+                            "value": "api-data-processing"
+                        },
+                        {
+                            "name": "version",
+                            "value": "1.0"
+                        }
+                    ]
+                }
+            },
+            "position": {
+                "x": 850,
+                "y": 200
+            }
+        },
+        {
+            "id": "check-count",
+            "type": "conditional",
+            "data": {
+                "label": "Check User Count",
+                "config": {
+                    "rule": {
+                        "field": "items.length",
+                        "operator": ">",
+                        "value": 5
+                    }
+                }
+            },
+            "position": {
+                "x": 1050,
+                "y": 200
+            }
+        },
+        {
+            "id": "send-success-notification",
+            "type": "slack",
+            "data": {
+                "label": "Success Notification",
+                "config": {
+                    "message": "✅ Successfully processed {{items.length}} high-score users from API!",
+                    "webhookUrl": ""
+                }
+            },
+            "position": {
+                "x": 1250,
+                "y": 100
+            }
+        },
+        {
+            "id": "send-low-count-alert",
+            "type": "discord",
+            "data": {
+                "label": "Low Count Alert",
+                "config": {
+                    "message": "⚠️ Warning: Only {{items.length}} users found (expected more than 5)",
+                    "webhookUrl": ""
+                }
+            },
+            "position": {
+                "x": 1250,
+                "y": 300
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "webhook-start",
+            "target": "fetch-users"
+        },
+        {
+            "id": "e2",
+            "source": "fetch-users",
+            "target": "process-users"
+        },
+        {
+            "id": "e3",
+            "source": "process-users",
+            "target": "filter-high-score"
+        },
+        {
+            "id": "e4",
+            "source": "filter-high-score",
+            "target": "add-metadata"
+        },
+        {
+            "id": "e5",
+            "source": "add-metadata",
+            "target": "check-count"
+        },
+        {
+            "id": "e6-true",
+            "source": "check-count",
+            "target": "send-success-notification",
+            "sourceHandle": "true"
+        },
+        {
+            "id": "e7-false",
+            "source": "check-count",
+            "target": "send-low-count-alert",
+            "sourceHandle": "false"
+        }
+    ]
+}
