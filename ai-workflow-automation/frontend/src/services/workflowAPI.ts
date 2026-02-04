@@ -1,6 +1,6 @@
 // API service for backend communication
 
-const BACKEND_URL = 'http://localhost:4000';
+const BACKEND_URL = 'http://localhost:4000/api';
 
 export interface SaveWorkflowResponse {
     status: string;

@@ -48,6 +48,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
 
     const handleSave = () => {
         onConfigChange(node.id, config);
+        onClose();
     };
 
     const metadata = nodeMetadata[node.type] || { icon: '⚙️', label: 'Node', color: '#64748b' };
@@ -152,7 +153,7 @@ const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Schedule Settings</h4>
-            
+
             <div className="form-group">
                 <label>Trigger Mode</label>
                 <select
@@ -264,7 +265,7 @@ const EmailConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Email Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -345,7 +346,7 @@ const WhatsAppConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>WhatsApp Business Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -447,7 +448,7 @@ const TelegramConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Telegram Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -552,7 +553,7 @@ const DiscordConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Discord Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -645,7 +646,7 @@ const SlackConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Slack Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -668,7 +669,7 @@ const SlackConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                 />
             </div>
 
-            {config.operation === 'sendMessage' && (
+            {(config.operation === 'sendMessage' || !config.operation) && (
                 <>
                     <div className="form-group">
                         <label>Message</label>
@@ -720,7 +721,7 @@ const GoogleSheetsConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => 
     return (
         <div className="config-section">
             <h4>Google Sheets Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -797,7 +798,7 @@ const AirtableConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Airtable Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -876,7 +877,7 @@ const NotionConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Notion Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -932,11 +933,11 @@ const NotionConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
 // Database (MySQL/PostgreSQL) Configuration
 const DatabaseConfig: React.FC<ConfigProps & { nodeType: string }> = ({ config, updateConfig, nodeType }) => {
     const dbName = nodeType === NODE_TYPES.MYSQL ? 'MySQL' : 'PostgreSQL';
-    
+
     return (
         <div className="config-section">
             <h4>{dbName} Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -1015,7 +1016,7 @@ const OpenAIConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>OpenAI Settings</h4>
-            
+
             <div className="form-group">
                 <label>Operation</label>
                 <select
@@ -1166,7 +1167,7 @@ const SetConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Set/Transform Settings</h4>
-            
+
             <div className="form-group">
                 <label className="checkbox-label">
                     <input
@@ -1234,7 +1235,7 @@ const FilterConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Filter Settings</h4>
-            
+
             <div className="form-group">
                 <label>Combine Conditions</label>
                 <select
@@ -1291,7 +1292,7 @@ const MergeConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Merge Settings</h4>
-            
+
             <div className="form-group">
                 <label>Mode</label>
                 <select
@@ -1338,7 +1339,7 @@ const SplitBatchesConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => 
     return (
         <div className="config-section">
             <h4>Split in Batches Settings</h4>
-            
+
             <div className="form-group">
                 <label>Batch Size</label>
                 <input
@@ -1368,7 +1369,7 @@ const HTTPConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>HTTP Request Settings</h4>
-            
+
             <div className="form-group">
                 <label>Method</label>
                 <select
@@ -1516,7 +1517,7 @@ const ConditionalConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>IF Condition Settings</h4>
-            
+
             <div className="form-group">
                 <label>Condition Type</label>
                 <select
@@ -1589,7 +1590,7 @@ const DelayConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Delay Settings</h4>
-            
+
             <div className="form-group">
                 <label>Delay Type</label>
                 <select
@@ -1642,7 +1643,7 @@ const JavaScriptConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
     return (
         <div className="config-section">
             <h4>Code Settings</h4>
-            
+
             <div className="form-group">
                 <label>JavaScript Code</label>
                 <textarea
@@ -1707,6 +1708,8 @@ const CredentialsTab: React.FC<ConfigProps & { nodeType: string }> = ({ config, 
                         value={config[field.key] || ''}
                         onChange={(e) => updateConfig(field.key, e.target.value)}
                         placeholder={field.placeholder}
+                        name={`credential_${field.key}`}
+                        autoComplete="new-password"
                     />
                     {field.helpText && <small className="help-text">{field.helpText}</small>}
                 </div>

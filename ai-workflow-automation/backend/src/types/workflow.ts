@@ -59,10 +59,16 @@ export interface WebhookConfig {
 export interface WorkflowNodeData {
     id: string;
     type: string;
-    config: Record<string, any>;
+    data: {
+        label: string;
+        config: Record<string, any>;
+        [key: string]: any;
+    };
+    position: { x: number; y: number };
 }
 
 export interface WorkflowEdge {
+    id: string;
     source: string;
     target: string;
     sourceHandle?: string;
@@ -70,6 +76,12 @@ export interface WorkflowEdge {
 
 export interface Workflow {
     id: string;
+    name: string;
+    description?: string;
     nodes: WorkflowNodeData[];
     edges: WorkflowEdge[];
+    isActive: boolean;
+    webhookUrl: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }

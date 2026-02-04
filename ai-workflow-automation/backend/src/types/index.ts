@@ -28,6 +28,7 @@ export interface ExecutionResult {
     data?: any;
     error?: string;
     nextNodes?: string[];
+    outputHandle?: string;
 }
 
 export interface LogEntry {

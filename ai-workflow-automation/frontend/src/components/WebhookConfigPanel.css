@@ -46,6 +46,8 @@
     background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
     color: white;
     flex-shrink: 0;
+    z-index: 10;
+    position: relative;
 }
 
 .header-title {
@@ -417,6 +419,8 @@
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
     flex-shrink: 0;
+    z-index: 10;
+    position: relative;
 }
 
 .cancel-btn {

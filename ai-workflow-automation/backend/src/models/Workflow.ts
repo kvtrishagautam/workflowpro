@@ -26,6 +26,12 @@ const WorkflowSchema = new Schema<IWorkflow>(
             required: true,
             trim: true,
         },
+        id: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
+        },
         description: {
             type: String,
             trim: true,

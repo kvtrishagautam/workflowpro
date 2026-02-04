@@ -119,6 +119,7 @@ const WebhookConfigPanel: React.FC<WebhookConfigPanelProps> = ({
     const handleSave = () => {
         if (pathError) return;
         onConfigChange(localConfig);
+        onClose();
     };
 
     const copyToClipboard = (text: string) => {

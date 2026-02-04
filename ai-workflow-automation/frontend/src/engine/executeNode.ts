@@ -113,27 +113,53 @@ async function executeConditional(
     nodeMap: Map<string, NodeProps>,
     run: WorkflowRun
 ): Promise<void> {
-    const rule = node.data.config?.rule;
-    if (!rule) {
-        console.warn(`[WARN] Conditional node ${node.id} has no rule config`);
-        return executeNext(node, data, workflow, nodeMap, run);
+    const cfg = node.data.config || {};
+
+    // Support both simple and expression-based conditions as configured in the UI
+    let result = false;
+
+    if (cfg.conditionType === 'expression' && cfg.expression) {
+        try {
+            // Evaluate expression with `data` in scope. Expression should return truthy/falsey.
+            // Example: data.count > 10 && data.status === 'active'
+            // eslint-disable-next-line no-new-func
+            const fn = new Function('data', `return (${cfg.expression});`);
+            result = Boolean(fn(data));
+        } catch (err) {
+            console.warn(`[WARN] Conditional node ${node.id} expression error:`, err);
+            result = false;
+        }
+    } else {
+        // Simple condition: use field/operator/value from config
+        const field = cfg.field || '';
+        const operator = cfg.operator || 'equals';
+        const compareValue = cfg.value;
+
+        const left = getNestedProperty(data, field);
+        result = evaluateSimpleCondition(left, operator, compareValue);
     }
 
-    const result = evaluateCondition(rule, data);
-    console.log(
-        `[CONDITIONAL] Node ${node.id}: rule evaluated to ${result}`
-    );
+    console.log(`[CONDITIONAL] Node ${node.id}: evaluated to ${result}`);
+
+    // Log the conditional evaluation as a step in the run
+    const condLog: NodeRunLog = {
+        nodeId: node.id,
+        nodeType: node.type,
+        input: data,
+        output: { conditionResult: result },
+        status: 'success',
+        timestamp: Date.now(),
+    };
+
+    run.logs.push(condLog);
+    updateRun(run);
 
     const edge = workflow.edges.find(
-        (e) =>
-            e.source === node.id &&
-            e.sourceHandle === (result ? 'true' : 'false')
+        (e) => e.source === node.id && e.sourceHandle === (result ? 'true' : 'false')
     );
 
     if (!edge) {
-        console.log(
-            `[INFO] No edge found for ${result ? 'true' : 'false'} branch`
-        );
+        console.log(`[INFO] No edge found for ${result ? 'true' : 'false'} branch`);
         return;
     }
 

@@ -7,6 +7,7 @@ export const createWorkflow = async (req: AuthRequest, res: Response): Promise<v
         const { name, description, nodes, edges } = req.body;
 
         const workflow = new Workflow({
+            id: req.body.id || `wf_${Date.now()}`,
             userId: req.user._id,
             name,
             description,

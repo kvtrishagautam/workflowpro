@@ -45,7 +45,7 @@ const Editor: React.FC = () => {
 
     const handleAddNode = (nodeType: string) => {
         let config: Record<string, any> = {};
-        
+
         // Set default configuration based on node type
         switch (nodeType) {
             case NODE_TYPES.WEBHOOK:
@@ -120,8 +120,10 @@ const Editor: React.FC = () => {
                 break;
             case NODE_TYPES.CONDITIONAL:
                 config = {
-                    conditions: [],
-                    combineOperation: 'all',
+                    conditionType: 'simple',
+                    field: 'data.priority',
+                    operator: 'equals',
+                    value: 'Urgent',
                 };
                 break;
             case NODE_TYPES.DELAY:

@@ -2,9 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import webhookRoutes from './routes/webhookRoutes';
+import authRoutes from './routes/auth.routes';
+import { connectDatabase } from './config/database';
+
+import { config } from './config/env';
 
 const app = express();
-const PORT = 4000;
+const PORT = config.port;
 
 // Middleware
 app.use(cors());
@@ -19,7 +23,9 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use(webhookRoutes);
+app.use('/api/auth', authRoutes);
+// Mount API routes under /api to match frontend client baseURL
+app.use('/api', webhookRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -39,16 +45,27 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log('\n🚀 ========================================');
-    console.log(`   Webhook Backend Server Started`);
-    console.log('   ========================================');
-    console.log(`   📍 URL: http://localhost:${PORT}`);
-    console.log(`   🏥 Health: http://localhost:${PORT}/health`);
-    console.log(`   📝 Workflows: http://localhost:${PORT}/workflows`);
-    console.log(`   🔔 Webhooks: http://localhost:${PORT}/webhook/*`);
-    console.log('   ========================================\n');
-});
+// Helper function to start server
+const startServer = async () => {
+    try {
+        await connectDatabase();
+
+        app.listen(PORT, () => {
+            console.log('\n🚀 ========================================');
+            console.log(`   Webhook Backend Server Started`);
+            console.log('   ========================================');
+            console.log(`   📍 URL: http://localhost:${PORT}`);
+            console.log(`   🏥 Health: http://localhost:${PORT}/api/health`);
+            console.log(`   📝 Workflows: http://localhost:${PORT}/api/workflows`);
+            console.log(`   🔔 Webhooks: http://localhost:${PORT}/api/webhook/*`);
+            console.log('   ========================================\n');
+        });
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+startServer();
 
 export default app;

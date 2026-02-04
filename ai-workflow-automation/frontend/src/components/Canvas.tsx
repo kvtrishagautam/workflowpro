@@ -16,7 +16,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     const [draggedNode, setDraggedNode] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionStart, setConnectionStart] = useState<string | null>(null);
+    const [connectionStart, setConnectionStart] = useState<{ nodeId: string; handle?: string } | null>(null);
     const [connectionEnd, setConnectionEnd] = useState<{ x: number; y: number } | null>(null);
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -113,13 +113,13 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     };
 
     // Connector click to start connection
-    const handleConnectorMouseDown = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => {
+    const handleConnectorMouseDown = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', handle?: string) => {
         e.stopPropagation();
 
         // Only allow connections from output connectors
         if (connectorType === 'output') {
             setIsConnecting(true);
-            setConnectionStart(nodeId);
+            setConnectionStart({ nodeId, handle });
 
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -135,21 +135,25 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     };
 
     // Connector mouse up to complete connection
-    const handleConnectorMouseUp = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => {
+    const handleConnectorMouseUp = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', handle?: string) => {
         e.stopPropagation();
 
-        if (isConnecting && connectionStart && connectorType === 'input' && connectionStart !== nodeId) {
+        if (isConnecting && connectionStart && connectorType === 'input' && connectionStart.nodeId !== nodeId) {
             // Check if edge already exists
             const edgeExists = workflow.edges.some(
-                (edge) => edge.source === connectionStart && edge.target === nodeId
+                (edge) => edge.source === connectionStart.nodeId && edge.target === nodeId
             );
 
             if (!edgeExists) {
-                const newEdge = {
+                const newEdge: any = {
                     id: `edge_${Date.now()}`,
-                    source: connectionStart,
+                    source: connectionStart.nodeId,
                     target: nodeId,
                 };
+
+                if (connectionStart.handle) {
+                    newEdge.sourceHandle = connectionStart.handle;
+                }
 
                 const updated = {
                     ...workflow,
@@ -493,7 +497,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
                     {/* Render connection preview */}
                     {isConnecting && connectionStart && connectionEnd && (() => {
-                        const sourceNode = workflow.nodes.find((n) => n.id === connectionStart);
+                        const sourceNode = workflow.nodes.find((n) => n.id === connectionStart.nodeId);
                         if (!sourceNode) return null;
 
                         const sourceDims = getNodeDimensions(sourceNode.id);
@@ -532,17 +536,51 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
             {/* Controls */}
             <div className="canvas-controls">
-                {selectedEdge && (
-                    <div className="edge-controls">
-                        <button
-                            onClick={() => handleEdgeDelete(selectedEdge)}
-                            className="delete-edge-btn"
-                            title="Delete Connection"
-                        >
-                            🗑️ Delete Connection
-                        </button>
-                    </div>
-                )}
+                {selectedEdge && (() => {
+                    const edge = workflow.edges.find((e) => e.id === selectedEdge);
+                    const sourceNode = edge ? workflow.nodes.find((n) => n.id === edge.source) : undefined;
+
+                    return (
+                        <div className="edge-controls">
+                            <button
+                                onClick={() => handleEdgeDelete(selectedEdge)}
+                                className="delete-edge-btn"
+                                title="Delete Connection"
+                            >
+                                🗑️ Delete Connection
+                            </button>
+
+                            {/* If the source node is a conditional node, allow choosing true/false branch */}
+                            {sourceNode && sourceNode.type === 'conditional' && (
+                                <div className="branch-controls">
+                                    <span className="branch-label">Branch:</span>
+                                    <button
+                                        className={`branch-btn ${edge?.sourceHandle === 'true' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            const updatedEdges = workflow.edges.map((ev) =>
+                                                ev.id === selectedEdge ? { ...ev, sourceHandle: 'true' } : ev
+                                            );
+                                            onWorkflowChange?.({ ...workflow, edges: updatedEdges });
+                                        }}
+                                    >
+                                        True
+                                    </button>
+                                    <button
+                                        className={`branch-btn ${edge?.sourceHandle === 'false' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            const updatedEdges = workflow.edges.map((ev) =>
+                                                ev.id === selectedEdge ? { ...ev, sourceHandle: 'false' } : ev
+                                            );
+                                            onWorkflowChange?.({ ...workflow, edges: updatedEdges });
+                                        }}
+                                    >
+                                        False
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
                 <div className="zoom-controls">
                     <button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} title="Zoom Out">
                         −

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { findWorkflowByWebhook, saveWorkflow, getAllWorkflows } from '../store/workflowStore';
 import { executeWorkflow, WebhookExecutionContext } from '../services/executionService';
 import { WorkflowService } from '../services/workflowService';
@@ -102,7 +103,7 @@ router.all('/webhook/test/*', async (req: Request, res: Response) => {
         console.log(`📦 Payload:`, JSON.stringify(req.body, null, 2));
         console.log(`📋 Headers:`, JSON.stringify(req.headers, null, 2));
 
-        const workflow = findWorkflowByWebhook(path, method);
+        const workflow = await findWorkflowByWebhook(path, method);
 
         if (!workflow) {
             return res.status(404).json({
@@ -148,7 +149,7 @@ router.all('/webhook/*', async (req: Request, res: Response) => {
         console.log(`\n🔔 Webhook received: ${method} ${path}`);
         console.log(`📦 Payload:`, JSON.stringify(req.body, null, 2));
 
-        const workflow = findWorkflowByWebhook(path, method);
+        const workflow = await findWorkflowByWebhook(path, method);
 
         if (!workflow) {
             console.log(`❌ No workflow found for webhook: ${method} ${path}`);
@@ -163,7 +164,9 @@ router.all('/webhook/*', async (req: Request, res: Response) => {
 
         // Get webhook node configuration
         const webhookNode = workflow.nodes.find(n => n.type === 'webhook');
-        const webhookConfig: Partial<WebhookConfig> = webhookNode?.config || {};
+        // Handle potentially different node structure from DB
+        const config = webhookNode?.data?.config || (webhookNode as any)?.config || {};
+        const webhookConfig: Partial<WebhookConfig> = config;
 
         // Set CORS headers
         setCorsHeaders(res, webhookConfig.options?.allowedOrigins, req);
@@ -291,23 +294,29 @@ router.post('/workflows', async (req: Request, res: Response) => {
     try {
         const workflow = req.body;
 
+        // Ensure a userId is present for the workflow document (use a default system id)
+        if (!workflow.userId) {
+            workflow.userId = new mongoose.Types.ObjectId().toHexString();
+        }
+
         console.log(`\n💾 Saving workflow: ${workflow.id}`);
 
         // Validate workflow
         WorkflowService.validateWorkflow(workflow);
 
-        saveWorkflow(workflow);
+        await saveWorkflow(workflow);
 
         // Log webhook endpoints
         const webhookNodes = workflow.nodes.filter((n: any) => n.type === 'webhook');
         if (webhookNodes.length > 0) {
             console.log('📍 Registered webhook endpoints:');
             webhookNodes.forEach((node: any) => {
-                const method = node.config.httpMethod || node.config.method || 'POST';
-                const path = node.config.path || '/webhook';
+                const config = node.data?.config || node.config || {};
+                const method = config.httpMethod || config.method || 'POST';
+                const path = config.path || '/webhook';
                 console.log(`   ${method} /webhook${path}`);
-                if (node.config.authentication && node.config.authentication !== 'none') {
-                    console.log(`      🔐 Auth: ${node.config.authentication}`);
+                if (config.authentication && config.authentication !== 'none') {
+                    console.log(`      🔐 Auth: ${config.authentication}`);
                 }
             });
         }
@@ -315,12 +324,15 @@ router.post('/workflows', async (req: Request, res: Response) => {
         res.json({
             status: 'saved',
             workflowId: workflow.id,
-            webhooks: webhookNodes.map((n: any) => ({
-                method: n.config.httpMethod || n.config.method || 'POST',
-                path: `/webhook${n.config.path}`,
-                testPath: `/webhook/test${n.config.path}`,
-                authentication: n.config.authentication || 'none'
-            }))
+            webhooks: webhookNodes.map((n: any) => {
+                const config = n.data?.config || n.config || {};
+                return {
+                    method: config.httpMethod || config.method || 'POST',
+                    path: `/webhook${config.path}`,
+                    testPath: `/webhook/test${config.path}`,
+                    authentication: config.authentication || 'none'
+                };
+            })
         });
     } catch (error: any) {
         console.error('❌ Save workflow error:', error);
@@ -332,8 +344,8 @@ router.post('/workflows', async (req: Request, res: Response) => {
 });
 
 // Get all workflows
-router.get('/workflows', (req: Request, res: Response) => {
-    const workflows = getAllWorkflows();
+router.get('/workflows', async (req: Request, res: Response) => {
+    const workflows = await getAllWorkflows();
     res.json({
         count: workflows.length,
         workflows

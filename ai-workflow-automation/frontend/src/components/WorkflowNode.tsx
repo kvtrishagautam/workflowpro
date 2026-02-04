@@ -9,8 +9,8 @@ interface WorkflowNodeComponentProps {
     onSelect: (nodeId: string) => void;
     onDelete: (nodeId: string) => void;
     onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
-    onConnectorMouseDown: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => void;
-    onConnectorMouseUp: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => void;
+    onConnectorMouseDown: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', handle?: string) => void;
+    onConnectorMouseUp: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', handle?: string) => void;
     onUpdate?: (nodeId: string, updatedNode: NodeProps) => void;
     onOpenWebhookConfig?: (node: NodeProps) => void;
     onOpenNodeConfig?: (node: NodeProps) => void;
@@ -379,18 +379,48 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                     onConnectorMouseUp(e, node.id, 'input');
                 }}
             />
-            <div
-                className="node-connector output-connector"
-                title="Output"
-                onMouseDown={(e) => {
-                    e.stopPropagation();
-                    onConnectorMouseDown(e, node.id, 'output');
-                }}
-                onMouseUp={(e) => {
-                    e.stopPropagation();
-                    onConnectorMouseUp(e, node.id, 'output');
-                }}
-            />
+            {/* For conditional nodes, render two branch output handles (true/false) */}
+            {node.type === NODE_TYPES.CONDITIONAL ? (
+                <>
+                    <div
+                        className="node-connector output-connector branch-true"
+                        title="True branch"
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseDown(e, node.id, 'output', 'true');
+                        }}
+                        onMouseUp={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseUp(e, node.id, 'output', 'true');
+                        }}
+                    />
+                    <div
+                        className="node-connector output-connector branch-false"
+                        title="False branch"
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseDown(e, node.id, 'output', 'false');
+                        }}
+                        onMouseUp={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseUp(e, node.id, 'output', 'false');
+                        }}
+                    />
+                </>
+            ) : (
+                <div
+                    className="node-connector output-connector"
+                    title="Output"
+                    onMouseDown={(e) => {
+                        e.stopPropagation();
+                        onConnectorMouseDown(e, node.id, 'output');
+                    }}
+                    onMouseUp={(e) => {
+                        e.stopPropagation();
+                        onConnectorMouseUp(e, node.id, 'output');
+                    }}
+                />
+            )}
 
             {/* Context Menu */}
             {showMenu && (

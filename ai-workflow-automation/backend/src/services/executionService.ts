@@ -1,5 +1,6 @@
 import { Workflow, WebhookConfig, WorkflowNodeData, WorkflowEdge } from '../types/workflow';
 import { slackExecutor } from '../executors/slack.executor';
+import { conditionExecutor } from '../executors/condition.executor';
 import { ExecutionContext, ExecutionResult, WorkflowNode } from '../types';
 
 // Webhook execution context - contains request data and webhook configuration
@@ -31,11 +32,15 @@ export async function executeWorkflow(
 
     try {
         // Convert WorkflowNodeData to WorkflowNode (adapting types)
+        // Convert WorkflowNodeData to WorkflowNode (adapting types)
         const nodes: WorkflowNode[] = workflow.nodes.map(n => ({
             id: n.id,
             type: n.type as any,
-            data: { config: n.config, label: n.type },
-            position: { x: 0, y: 0 } // Default position since it's not strictly needed for execution
+            data: {
+                config: n.data?.config || (n as any).config || {},
+                label: n.data?.label || n.type
+            },
+            position: { x: 0, y: 0 }
         }));
 
         // Use edges from workflow
@@ -52,7 +57,21 @@ export async function executeWorkflow(
         let previousOutput = payload;
 
         // Execute nodes
+        const skippedNodes = new Set<string>();
+
         for (const node of sortedNodes) {
+            if (skippedNodes.has(node.id)) {
+                console.log(`⏭️ Skipping node: ${node.type} (${node.id})`);
+                executionLogs.push({
+                    nodeId: node.id,
+                    type: node.type,
+                    success: true,
+                    result: { success: true, data: null, skipped: true },
+                    message: 'Skipped due to condition'
+                });
+                continue;
+            }
+
             console.log(`▶️ Executing node: ${node.type} (${node.id})`);
 
             const executionContext: ExecutionContext = {
@@ -72,6 +91,9 @@ export async function executeWorkflow(
                 case 'slack':
                     result = await slackExecutor.execute(executionContext);
                     break;
+                case 'conditional':
+                    result = await conditionExecutor.execute(executionContext);
+                    break;
                 case 'webhook':
                     result = { success: true, data: payload };
                     break;
@@ -85,7 +107,8 @@ export async function executeWorkflow(
                 nodeId: node.id,
                 type: node.type,
                 success: result.success,
-                result: result
+                result: result,
+                outputHandle: result.outputHandle // Log which handle was taken
             });
 
             if (!result.success) {
@@ -95,6 +118,25 @@ export async function executeWorkflow(
 
             results[node.id] = result;
             previousOutput = result.data;
+
+            // Handle branching logic
+            if (result.outputHandle) {
+                const currentNodeId = node.id;
+                const outputHandle = result.outputHandle;
+
+                // Find edges starting from this node
+                const outgoingEdges = edges.filter(e => e.source === currentNodeId);
+
+                // Identify nodes to skip (connected to OTHER handles)
+                outgoingEdges.forEach(edge => {
+                    // If edge has a handle and it DOESN'T match the output handle, skip the target
+                    // Note: If edge has NO handle, it's a default path, so usually execute it (unless strict outputHandle logic is desired)
+                    // For Conditional Node: handles are 'true' and 'false'.
+                    if (edge.sourceHandle && edge.sourceHandle !== outputHandle) {
+                        skippedNodes.add(edge.target);
+                    }
+                });
+            }
         }
 
         return {
