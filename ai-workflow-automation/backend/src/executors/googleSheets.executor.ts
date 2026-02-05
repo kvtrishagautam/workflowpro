@@ -86,6 +86,11 @@ export class GoogleSheetsExecutor {
                     values = config.values.map(processValue);
                 }
 
+                console.log('📊 Google Sheets Operation:', operation);
+                console.log('📊 Spreadsheet ID:', spreadsheetId);
+                console.log('📊 Range:', range);
+                console.log('📊 Values to Append:', JSON.stringify(values, null, 2));
+
                 try {
                     await sheets.spreadsheets.values.append({
                         spreadsheetId,

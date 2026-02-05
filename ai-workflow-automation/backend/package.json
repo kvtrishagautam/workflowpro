@@ -4,7 +4,7 @@
     "description": "Webhook backend for AI workflow automation",
     "main": "dist/server.js",
     "scripts": {
-        "dev": "ts-node src/server.ts",
+        "dev": "nodemon src/server.ts",
         "build": "tsc",
         "start": "node dist/server.js"
     },

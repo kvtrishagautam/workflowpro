@@ -767,6 +767,21 @@ const GoogleSheetsConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => 
                 />
             </div>
 
+            {(config.operation === 'append' || config.operation === 'update') && (
+                <div className="form-group">
+                    <label>Values (JSON Array)</label>
+                    <textarea
+                        value={config.values || ''}
+                        onChange={(e) => updateConfig('values', e.target.value)}
+                        placeholder='["${data.name}", "${data.email}", "${data.company}"]'
+                        rows={3}
+                    />
+                    <small className="help-text">
+                        Enter a JSON array with variable placeholders like ${'{data.fieldName}'}
+                    </small>
+                </div>
+            )}
+
             {config.operation === 'lookup' && (
                 <>
                     <div className="form-group">

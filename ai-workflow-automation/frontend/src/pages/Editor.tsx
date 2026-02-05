@@ -348,6 +348,7 @@ const Editor: React.FC = () => {
             const { WorkflowAPI } = await import('../services/workflowAPI');
             const result = await WorkflowAPI.triggerWebhook(path, 'POST', {
                 email: "demo@vip-client.com",
+                name: "Demo User",
                 amount: 5000,
                 company: "Tech Corp",
                 message: "Testing from Frontend"
