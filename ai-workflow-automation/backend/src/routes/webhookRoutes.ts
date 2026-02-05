@@ -4,6 +4,7 @@ import { findWorkflowByWebhook, saveWorkflow, getAllWorkflows } from '../store/w
 import { executeWorkflow, WebhookExecutionContext } from '../services/executionService';
 import { WorkflowService } from '../services/workflowService';
 import { WebhookConfig, WebhookAuthType } from '../types/workflow';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -290,12 +291,15 @@ router.all('/webhook/*', async (req: Request, res: Response) => {
 });
 
 // Save workflow endpoint
-router.post('/workflows', async (req: Request, res: Response) => {
+router.post('/workflows', authenticate, async (req: AuthRequest, res: Response) => {
     try {
         const workflow = req.body;
 
-        // Ensure a userId is present for the workflow document (use a default system id)
-        if (!workflow.userId) {
+        // Ensure a userId is present via auth token
+        if (req.user) {
+            workflow.userId = req.user._id;
+        } else if (!workflow.userId) {
+            // Fallback for non-auth requests (shouldn't happen with middleware, but safe for tests)
             workflow.userId = new mongoose.Types.ObjectId().toHexString();
         }
 
@@ -343,13 +347,60 @@ router.post('/workflows', async (req: Request, res: Response) => {
     }
 });
 
-// Get all workflows
-router.get('/workflows', async (req: Request, res: Response) => {
-    const workflows = await getAllWorkflows();
-    res.json({
-        count: workflows.length,
-        workflows
-    });
+// Get user's workflows
+router.get('/workflows', authenticate, async (req: AuthRequest, res: Response) => {
+    try {
+        const { getWorkflowsByUser } = require('../store/workflowStore');
+        // req.user is populated by authenticate middleware
+        const userId = req.user._id;
+        const workflows = await getWorkflowsByUser(userId);
+
+        res.json({
+            count: workflows.length,
+            workflows
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            error: 'Failed to fetch workflows',
+            message: error.message
+        });
+    }
+});
+
+// Get workflow by ID
+router.get('/workflows/:id', authenticate, async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    try {
+        console.log(`🔍 Seeking workflow: ${id}`);
+        const { getWorkflow } = require('../store/workflowStore');
+        const workflow = await getWorkflow(id);
+        console.log(`👉 Found: ${!!workflow}, IsTemplate: ${workflow?.isTemplate}`);
+
+        if (!workflow) {
+            return res.status(404).json({
+                error: 'Workflow not found',
+                message: `No workflow found with ID: ${id}`
+            });
+        }
+
+        // Check ownership
+        if (req.user && workflow.userId && workflow.userId.toString() !== req.user._id.toString()) {
+            // Allow if it's a public template
+            if (!workflow.isTemplate) {
+                return res.status(403).json({
+                    error: 'Forbidden',
+                    message: 'You are not authorized to view this workflow'
+                });
+            }
+        }
+
+        res.json(workflow);
+    } catch (error: any) {
+        res.status(500).json({
+            error: 'Failed to fetch workflow',
+            message: error.message
+        });
+    }
 });
 
 // Health check

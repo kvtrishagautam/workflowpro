@@ -7,12 +7,20 @@ import { Workflow as BackendWorkflow, WorkflowNodeData } from '../types/workflow
 export function toBackendWorkflow(frontendWorkflow: FrontendWorkflow): BackendWorkflow {
     return {
         id: frontendWorkflow.id || `workflow_${Date.now()}`,
-        nodes: frontendWorkflow.nodes.map((node): WorkflowNodeData => ({
+        name: frontendWorkflow.name,
+        description: frontendWorkflow.description,
+        nodes: frontendWorkflow.nodes.map((node) => ({
             id: node.id,
             type: node.type,
-            config: node.data?.config || {},
+            position: node.position,
+            config: node.data.config || {},
+            data: {
+                label: node.data.label,
+                config: node.data.config || {}
+            }
         })),
         edges: frontendWorkflow.edges.map((edge) => ({
+            id: edge.id,
             source: edge.source,
             target: edge.target,
             sourceHandle: edge.sourceHandle,
@@ -29,19 +37,19 @@ export function toFrontendWorkflow(
 ): FrontendWorkflow {
     return {
         id: backendWorkflow.id || `workflow_${Date.now()}`,
-        name: existingWorkflow?.name || 'Imported Workflow',
-        description: existingWorkflow?.description || '',
-        nodes: backendWorkflow.nodes.map((node) => ({
+        name: backendWorkflow.name || existingWorkflow?.name || 'Imported Workflow',
+        description: backendWorkflow.description || existingWorkflow?.description || '',
+        nodes: backendWorkflow.nodes.map((node: any) => ({
             id: node.id,
             type: node.type,
             data: {
-                label: `${node.type} Node`,
-                config: node.config,
+                label: node.data?.label || `${node.type} Node`,
+                config: node.data?.config || node.config || {},
             },
-            position: { x: 100, y: 100 }, // Default position, can be improved
+            position: node.position || { x: 100, y: 100 },
         })),
         edges: backendWorkflow.edges.map((edge, index) => ({
-            id: `edge-${index}`,
+            id: edge.id || `edge-${index}`,
             source: edge.source,
             target: edge.target,
             sourceHandle: edge.sourceHandle,

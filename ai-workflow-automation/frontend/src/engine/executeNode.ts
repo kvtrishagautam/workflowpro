@@ -633,9 +633,17 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
                 status: 'simulated',
                 operation,
                 prompt,
-                response: 'This is a simulated OpenAI response. Configure an API key to get real results.',
+                response: JSON.stringify({
+                    score: 85,
+                    summary: 'This is a high-potential VIP lead from a known enterprise company.',
+                    analysis: 'Excellent fit for enterprise plan based on company size and budget.'
+                }),
+                usage: { prompt_tokens: 50, completion_tokens: 20, total_tokens: 70 },
                 timestamp: Date.now(),
             },
+            // Also merge the parsed response into data for easy access in subsequent nodes
+            score: 85,
+            summary: 'High potential VIP lead',
         };
     }
 

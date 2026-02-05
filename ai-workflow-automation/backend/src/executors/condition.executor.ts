@@ -37,27 +37,39 @@ export class ConditionExecutor {
 
                 const actualValue = fieldPath ? getNestedValue(inputData, fieldPath) : inputData;
 
+                // Improved comparison logic that handles type coercion better
                 switch (operator) {
                     case 'equals':
-                        isConditionMet = actualValue == targetValue;
+                        // Handle "true" string vs true boolean
+                        if (typeof actualValue === 'boolean' && (targetValue === 'true' || targetValue === 'false')) {
+                            isConditionMet = actualValue === (targetValue === 'true');
+                        } else {
+                            isConditionMet = actualValue == targetValue;
+                        }
                         break;
                     case 'notEquals':
-                        isConditionMet = actualValue != targetValue;
+                        if (typeof actualValue === 'boolean' && (targetValue === 'true' || targetValue === 'false')) {
+                            isConditionMet = actualValue !== (targetValue === 'true');
+                        } else {
+                            isConditionMet = actualValue != targetValue;
+                        }
                         break;
                     case 'contains':
-                        isConditionMet = String(actualValue).includes(String(targetValue));
+                        if (!actualValue) isConditionMet = false;
+                        else isConditionMet = String(actualValue).toLowerCase().includes(String(targetValue).toLowerCase());
                         break;
                     case 'greaterThan':
-                        isConditionMet = Number(actualValue) > Number(targetValue);
+                        // Ensure numeric comparison
+                        isConditionMet = !isNaN(Number(actualValue)) && !isNaN(Number(targetValue)) && Number(actualValue) > Number(targetValue);
                         break;
                     case 'lessThan':
-                        isConditionMet = Number(actualValue) < Number(targetValue);
+                        isConditionMet = !isNaN(Number(actualValue)) && !isNaN(Number(targetValue)) && Number(actualValue) < Number(targetValue);
                         break;
                     case 'isEmpty':
-                        isConditionMet = !actualValue || actualValue === '' || (Array.isArray(actualValue) && actualValue.length === 0);
+                        isConditionMet = actualValue === null || actualValue === undefined || actualValue === '' || (Array.isArray(actualValue) && actualValue.length === 0) || (typeof actualValue === 'object' && Object.keys(actualValue).length === 0);
                         break;
                     case 'isNotEmpty':
-                        isConditionMet = !!actualValue && actualValue !== '' && (!Array.isArray(actualValue) || actualValue.length > 0);
+                        isConditionMet = !(actualValue === null || actualValue === undefined || actualValue === '' || (Array.isArray(actualValue) && actualValue.length === 0) || (typeof actualValue === 'object' && Object.keys(actualValue).length === 0));
                         break;
                     case 'isTrue':
                         isConditionMet = actualValue === true || actualValue === 'true';

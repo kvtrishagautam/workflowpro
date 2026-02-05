@@ -20,7 +20,7 @@ const Login: React.FC = () => {
             const response = await authAPI.login(email, password);
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
-            history.push('/editor');
+            history.push('/profile');
         } catch (err) {
             setError('Login failed. Please try again.');
         } finally {

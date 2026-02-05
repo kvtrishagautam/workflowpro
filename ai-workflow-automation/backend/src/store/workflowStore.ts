@@ -186,12 +186,28 @@ export function extractRouteParams(
 /**
  * Get all workflows
  */
+/**
+ * Get all workflows (admin only or internal use)
+ */
 export async function getAllWorkflows(): Promise<IWorkflow[]> {
     try {
         const workflows = await Workflow.find().sort({ updatedAt: -1 });
         return workflows.map(w => w.toObject());
     } catch (error) {
         console.error('Error fetching all workflows:', error);
+        return [];
+    }
+}
+
+/**
+ * Get workflows for a specific user
+ */
+export async function getWorkflowsByUser(userId: string): Promise<IWorkflow[]> {
+    try {
+        const workflows = await Workflow.find({ userId }).sort({ updatedAt: -1 });
+        return workflows.map(w => w.toObject());
+    } catch (error) {
+        console.error(`Error fetching workflows for user ${userId}:`, error);
         return [];
     }
 }

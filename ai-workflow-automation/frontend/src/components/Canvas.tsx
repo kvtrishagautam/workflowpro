@@ -26,6 +26,67 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
     const [spacePressed, setSpacePressed] = useState(false);
 
+    // Auto-fit view when loading a new workflow
+    React.useEffect(() => {
+        if (workflow?.nodes && workflow.nodes.length > 0) {
+            // Small delay to ensure DOM is ready
+            const timer = setTimeout(() => {
+                fitView();
+            }, 150);
+            return () => clearTimeout(timer);
+        } else {
+            // Reset to default for empty
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [workflow?.id]); // Only trigger when workflow ID changes
+
+    const fitView = () => {
+        if (!workflow?.nodes || workflow.nodes.length === 0 || !canvasRef.current) return;
+
+        const padding = 80;
+        const nodes = workflow.nodes;
+
+        // Calculate bounding box
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        nodes.forEach(node => {
+            minX = Math.min(minX, node.position.x);
+            minY = Math.min(minY, node.position.y);
+            // Estimate node size if not measurable yet (standard node width ~250, height ~150-300)
+            const nodeWidth = 250;
+            const nodeHeight = 200;
+            maxX = Math.max(maxX, node.position.x + nodeWidth);
+            maxY = Math.max(maxY, node.position.y + nodeHeight);
+        });
+
+        // Get canvas dimensions
+        const { width: canvasWidth, height: canvasHeight } = canvasRef.current.getBoundingClientRect();
+        if (canvasWidth === 0 || canvasHeight === 0) return; // Wait until properly rendered
+
+        // Calculate scale
+        const contentWidth = maxX - minX + (padding * 2);
+        const contentHeight = maxY - minY + (padding * 2);
+
+        const scaleX = canvasWidth / contentWidth;
+        const scaleY = canvasHeight / contentHeight;
+        const newZoom = Math.min(Math.min(scaleX, scaleY), 1); // Don't zoom in more than 100%
+
+        // Calculate center
+        const contentCenterX = minX + (contentWidth / 2) - padding;
+        const contentCenterY = minY + (contentHeight / 2) - padding;
+
+        const panX = (canvasWidth / 2) - (contentCenterX * newZoom);
+        const panY = (canvasHeight / 2) - (contentCenterY * newZoom);
+
+        setZoom(newZoom);
+        setPan({ x: panX, y: panY });
+    };
+
     // Keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -474,7 +535,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                                     stroke="transparent"
                                     strokeWidth="20"
                                     fill="none"
-                                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                                    style={{ pointerEvents: 'all', cursor: 'pointer' }}
                                     onMouseEnter={() => setHoveredEdge(edge.id)}
                                     onMouseLeave={() => setHoveredEdge(null)}
                                     onClick={(e) => {
@@ -484,9 +545,8 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                                 />
                                 {/* Visible connection path */}
                                 <path
-                                    className={`connection ${
-                                        isSelected ? 'connection-selected' : isHovered ? 'connection-hover' : ''
-                                    }`}
+                                    className={`connection ${isSelected ? 'connection-selected' : isHovered ? 'connection-hover' : ''
+                                        }`}
                                     d={path}
                                     markerEnd={`url(#arrowhead${isSelected ? '-selected' : isHovered ? '-hover' : ''})`}
                                     style={{ pointerEvents: 'none' }}
@@ -589,11 +649,11 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} title="Zoom In">
                         +
                     </button>
-                    <button 
+                    <button
                         onClick={() => {
                             setZoom(1);
                             setPan({ x: 0, y: 0 });
-                        }} 
+                        }}
                         title="Reset View"
                         className="reset-view-btn"
                     >
@@ -601,7 +661,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     </button>
                 </div>
             </div>
-            
+
             {/* Canvas Info Overlay */}
             <div className="canvas-info">
                 <div className="info-item">
@@ -613,7 +673,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     <span className="info-value">{workflow.edges.length}</span>
                 </div>
             </div>
-            
+
             {/* Keyboard Shortcuts Hint */}
             <div className="canvas-hints">
                 <div className="hint-item">

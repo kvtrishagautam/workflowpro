@@ -1,6 +1,9 @@
 import { Workflow, WebhookConfig, WorkflowNodeData, WorkflowEdge } from '../types/workflow';
 import { slackExecutor } from '../executors/slack.executor';
 import { conditionExecutor } from '../executors/condition.executor';
+import { filterExecutor } from '../executors/filter.executor';
+import { googleSheetsExecutor } from '../executors/googleSheets.executor';
+import { emailExecutor } from '../executors/email.executor';
 import { ExecutionContext, ExecutionResult, WorkflowNode } from '../types';
 import { WorkflowExecution } from '../models/WorkflowExecution';
 
@@ -111,6 +114,15 @@ export async function executeWorkflow(
                     break;
                 case 'conditional':
                     result = await conditionExecutor.execute(executionContext);
+                    break;
+                case 'filter':
+                    result = await filterExecutor.execute(executionContext);
+                    break;
+                case 'googleSheets':
+                    result = await googleSheetsExecutor.execute(executionContext);
+                    break;
+                case 'email':
+                    result = await emailExecutor.execute(executionContext);
                     break;
                 case 'webhook':
                     result = { success: true, data: payload };

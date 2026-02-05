@@ -18,15 +18,21 @@ export interface TriggerWebhookResponse {
 }
 
 export class WorkflowAPI {
+    static getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+        };
+    }
+
     /**
      * Save a workflow to the backend
      */
     static async saveWorkflow(workflow: any): Promise<SaveWorkflowResponse> {
         const response = await fetch(`${BACKEND_URL}/workflows`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(workflow),
         });
 
@@ -42,7 +48,9 @@ export class WorkflowAPI {
      * Get all workflows from the backend
      */
     static async getAllWorkflows(): Promise<any[]> {
-        const response = await fetch(`${BACKEND_URL}/workflows`);
+        const response = await fetch(`${BACKEND_URL}/workflows`, {
+            headers: this.getAuthHeaders()
+        });
 
         if (!response.ok) {
             throw new Error('Failed to fetch workflows');
@@ -50,6 +58,21 @@ export class WorkflowAPI {
 
         const data = await response.json();
         return data.workflows || [];
+    }
+
+    /**
+     * Get workflow by ID
+     */
+    static async getWorkflowById(id: string): Promise<any> {
+        const response = await fetch(`${BACKEND_URL}/workflows/${id}`, {
+            headers: this.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch workflow');
+        }
+
+        return response.json();
     }
 
     /**

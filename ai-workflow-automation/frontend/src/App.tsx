@@ -5,6 +5,8 @@ import Canvas from './components/Canvas';
 import Login from './pages/Login';
 import Signin from './pages/Signin';
 import Landing from './pages/Landing';
+import Profile from './pages/Profile';
+import PrivateRoute from './components/PrivateRoute';
 
 const App: React.FC = () => {
   return (
@@ -13,7 +15,8 @@ const App: React.FC = () => {
         <Route path="/" exact component={Landing} />
         <Route path="/login" exact component={Login} />
         <Route path="/signin" exact component={Signin} />
-        <Route path="/editor" exact component={Editor} />
+        <PrivateRoute path="/editor" exact component={Editor} />
+        <PrivateRoute path="/profile" exact component={Profile} />
         <Route path="/canvas" component={Canvas} />
       </Switch>
     </Router>

@@ -42,7 +42,12 @@ const WorkflowSchema = new Schema<IWorkflow>(
                     id: { type: String, required: true },
                     type: {
                         type: String,
-                        enum: ['webhook', 'javascript', 'slack', 'http', 'conditional', 'delay'],
+                        enum: [
+                            'webhook', 'javascript', 'slack', 'http', 'conditional', 'delay',
+                            'schedule', 'set', 'filter', 'merge', 'splitBatches',
+                            'email', 'whatsapp', 'telegram', 'discord',
+                            'googleSheets', 'airtable', 'notion', 'mysql', 'postgres', 'openai'
+                        ],
                         required: true,
                     },
                     data: {

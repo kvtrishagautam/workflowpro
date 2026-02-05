@@ -58,6 +58,7 @@ const startServer = async () => {
             console.log(`   🏥 Health: http://localhost:${PORT}/api/health`);
             console.log(`   📝 Workflows: http://localhost:${PORT}/api/workflows`);
             console.log(`   🔔 Webhooks: http://localhost:${PORT}/api/webhook/*`);
+            console.log(`   💾 DB: ${config.mongodbUri}`);
             console.log('   ========================================\n');
         });
     } catch (error) {

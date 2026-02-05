@@ -8,6 +8,7 @@ import { Workflow, NodeProps, NODE_TYPES } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
 import { executeWorkflow } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
+import Modal from '../components/Modal';
 import './Editor.css';
 
 const Editor: React.FC = () => {
@@ -23,6 +24,7 @@ const Editor: React.FC = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
+    const [isLoadingDemo, setIsLoadingDemo] = useState(false);
 
     // Webhook config panel state
     const [selectedWebhookNode, setSelectedWebhookNode] = useState<NodeProps | null>(null);
@@ -31,6 +33,27 @@ const Editor: React.FC = () => {
     // Generic node config panel state
     const [selectedNode, setSelectedNode] = useState<NodeProps | null>(null);
     const [isNodeConfigOpen, setIsNodeConfigOpen] = useState(false);
+
+    // Modal state
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        content: React.ReactNode;
+        type: 'info' | 'success' | 'error' | 'warning';
+    }>({
+        isOpen: false,
+        title: '',
+        content: null,
+        type: 'info',
+    });
+
+    const showModal = (title: string, content: React.ReactNode, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+        setModalConfig({ isOpen: true, title, content, type });
+    };
+
+    const closeModal = () => {
+        setModalConfig({ ...modalConfig, isOpen: false });
+    };
 
     useEffect(() => {
         resumeDelayedRuns(workflow);
@@ -222,6 +245,47 @@ const Editor: React.FC = () => {
         });
     };
 
+    // Load workflow from ID if present in URL
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const workflowId = params.get('id');
+
+        if (workflowId) {
+            loadWorkflow(workflowId);
+        }
+    }, []);
+
+    const loadWorkflow = async (id: string) => {
+        setIsLoadingDemo(true);
+        try {
+            const { WorkflowAPI } = await import('../services/workflowAPI');
+            // Use API method which includes auth headers
+            const savedWorkflow = await WorkflowAPI.getWorkflowById(id);
+
+            // If it's the demo template, reset ID so it saves as a new user workflow
+            if (savedWorkflow.isTemplate || id === 'wf-enterprise-demo') {
+                savedWorkflow.id = `workflow_${Date.now()}`;
+                savedWorkflow.name = `${savedWorkflow.name} (Copy)`;
+                savedWorkflow.isTemplate = false; // Reset template flag
+                // Clear URL param so it doesn't look like we're editing the template
+                window.history.pushState({}, '', window.location.pathname);
+            }
+
+            // Transform backend workflow to frontend-friendly format (mostly making sure positions exist)
+            // (Assuming backend format is compatible as we share types)
+            setWorkflow({
+                ...savedWorkflow,
+                updatedAt: new Date().toISOString()
+            });
+            console.log('✅ Loaded workflow:', savedWorkflow.name);
+        } catch (error) {
+            console.error('Failed to load workflow:', error);
+            showModal('Load Failed', 'Failed to load workflow. Check ID and try again.', 'error');
+        } finally {
+            setIsLoadingDemo(false);
+        }
+    };
+
     const handleSaveWorkflow = async () => {
         setIsSaving(true);
         try {
@@ -235,10 +299,18 @@ const Editor: React.FC = () => {
 
             console.log('✅ Workflow saved to backend:', response);
 
+            // Update URL with new ID if it wasn't there
+            const params = new URLSearchParams(window.location.search);
+            if (!params.get('id')) {
+                const newUrl = `${window.location.pathname}?id=${response.workflowId}`;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+                setWorkflow({ ...workflow, id: response.workflowId });
+            }
+
             // Log webhook URLs if any
             if (response.webhooks && response.webhooks.length > 0) {
                 console.log('📍 Registered webhooks:');
-                response.webhooks.forEach((webhook) => {
+                response.webhooks.forEach((webhook: any) => {
                     console.log(`   ${webhook.method} http://localhost:4000${webhook.path}`);
                 });
             }
@@ -246,14 +318,61 @@ const Editor: React.FC = () => {
             setLastSaved(new Date().toLocaleTimeString());
 
             // Show success notification
-            alert(`✅ Workflow saved successfully!\n${response.webhooks?.length || 0} webhook(s) registered.`);
+            showModal(
+                'Workflow Saved',
+                <div>
+                    <p>✅ Workflow <strong>{response.workflowId}</strong> saved successfully!</p>
+                    <p>{response.webhooks?.length || 0} webhook(s) registered.</p>
+                </div>,
+                'success'
+            );
         } catch (error) {
             console.error('Failed to save workflow:', error);
-            alert(`❌ Failed to save workflow: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            showModal('Save Failed', `Failed to save workflow: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
         } finally {
             setIsSaving(false);
         }
     };
+
+    const handleExecuteBackend = async () => {
+        const webhookNode = workflow.nodes.find(n => n.type === NODE_TYPES.WEBHOOK);
+        if (!webhookNode) {
+            alert('No Webhook node found to trigger.');
+            return;
+        }
+
+        const config = webhookNode.data.config || {};
+        const path = config.path || '/webhook'; // Fallback
+
+        try {
+            const { WorkflowAPI } = await import('../services/workflowAPI');
+            const result = await WorkflowAPI.triggerWebhook(path, 'POST', {
+                email: "demo@vip-client.com",
+                amount: 5000,
+                company: "Tech Corp",
+                message: "Testing from Frontend"
+            });
+            // alert(`✅ Backend Execution Triggered!\nCheck Slack/Email.\nResult: ${JSON.stringify(result)}`);
+            showModal(
+                'Execution Success',
+                <div>
+                    <p>✅ Backend Execution Triggered!</p>
+                    <p>Check your Slack workspace and Email inbox for results.</p>
+                    <details style={{ marginTop: '10px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '4px' }}>
+                        <summary style={{ cursor: 'pointer', marginBottom: '5px' }}>View Response Data</summary>
+                        <pre style={{ fontSize: '11px', overflow: 'auto' }}>
+                            {JSON.stringify(result, null, 2)}
+                        </pre>
+                    </details>
+                </div>,
+                'success'
+            );
+        } catch (error) {
+            console.error('Execution failed:', error);
+            showModal('Execution Failed', `Execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+        }
+    };
+
 
 
     const handleRunWorkflow = async () => {
@@ -266,9 +385,11 @@ const Editor: React.FC = () => {
                 timestamp: new Date().toISOString(),
             };
             await executeWorkflow(workflow, testPayload);
+            // executeWorkflow might not return a result here as it likely logs to console or updates history
+            // showModal is skipped here as executeWorkflow handles its own UI updates or we can add success modal here if needed
         } catch (error) {
             console.error('Workflow execution failed:', error);
-            alert(`Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            showModal('Execution Failed', `Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
         }
     };
 
@@ -417,6 +538,13 @@ const Editor: React.FC = () => {
                 </div>
 
                 <div className="editor-header-actions">
+                    <button
+                        className="secondary-button"
+                        onClick={() => window.location.href = '/profile'}
+                        style={{ marginRight: '15px', padding: '6px 12px' }}
+                    >
+                        ⬅ Profile
+                    </button>
                     <div className="workflow-stats">
                         <span title={`Nodes: ${workflow.nodes.length}`}>🔧 {workflow.nodes.length}</span>
                         <span title={`Connections: ${workflow.edges.length}`}>🔗 {workflow.edges.length}</span>
@@ -431,6 +559,26 @@ const Editor: React.FC = () => {
                     >
                         ▶️ Run
                     </button>
+
+                    <button
+                        className="run-button"
+                        onClick={handleExecuteBackend}
+                        style={{ backgroundColor: '#8b5cf6', marginLeft: '10px' }}
+                        title="Trigger Webhook on Backend (Real Execution)"
+                    >
+                        🚀 Execute Backend
+                    </button>
+                    {!new URLSearchParams(window.location.search).get('id') && (
+
+                        <button
+                            className="secondary-button"
+                            onClick={() => loadWorkflow('wf-enterprise-demo')}
+                            style={{ marginRight: '10px' }}
+                            disabled={isLoadingDemo}
+                        >
+                            {isLoadingDemo ? '📂 Loading...' : '📂 Load Demo'}
+                        </button>
+                    )}
 
                     <button
                         className={`save-button ${isSaving ? 'saving' : ''}`}
@@ -475,7 +623,17 @@ const Editor: React.FC = () => {
                     )}
                 </div>
             </div>
-        </div>
+
+
+            {/* Global Modal */}
+            <Modal
+                isOpen={modalConfig.isOpen}
+                title={modalConfig.title}
+                content={modalConfig.content}
+                type={modalConfig.type}
+                onClose={closeModal}
+            />
+        </div >
     );
 };
 
