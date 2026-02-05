@@ -2,6 +2,7 @@ import { Workflow, WebhookConfig, WorkflowNodeData, WorkflowEdge } from '../type
 import { slackExecutor } from '../executors/slack.executor';
 import { conditionExecutor } from '../executors/condition.executor';
 import { ExecutionContext, ExecutionResult, WorkflowNode } from '../types';
+import { WorkflowExecution } from '../models/WorkflowExecution';
 
 // Webhook execution context - contains request data and webhook configuration
 export interface WebhookExecutionContext {
@@ -26,6 +27,23 @@ export async function executeWorkflow(
         `🚀 Executing workflow ${workflow.id} with payload:`,
         JSON.stringify(payload, null, 2)
     );
+
+    // Create execution record
+    const execution = new WorkflowExecution({
+        workflowId: workflow._id || workflow.id, // Prefer MongoDB _id if available
+        status: 'running',
+        startedAt: new Date(),
+        logs: [],
+        inputData: payload
+    });
+
+    try {
+        await execution.save();
+    } catch (saveError) {
+        console.error('Failed to create execution record:', saveError);
+        // Continue execution even if saving fails initially? 
+        // Or fail? Let's log and proceed but we won't be able to update logs later without an ID.
+    }
 
     const results: Record<string, any> = {};
     const executionLogs: any[] = [];
@@ -76,7 +94,7 @@ export async function executeWorkflow(
 
             const executionContext: ExecutionContext = {
                 workflowId: workflow.id,
-                executionId: 'exec-' + Date.now(), // specific execution ID
+                executionId: execution._id.toString(), // Use actual DB ID
                 data: {
                     ...node.data,
                     config: node.data.config || {}
@@ -103,13 +121,25 @@ export async function executeWorkflow(
                     break;
             }
 
-            executionLogs.push({
+            const logEntry = {
                 nodeId: node.id,
-                type: node.type,
-                success: result.success,
+                timestamp: new Date(),
+                message: result.success ? 'Node executed successfully' : 'Node execution failed',
+                data: result.data, // May want to truncate if too large
+                level: result.success ? 'info' : 'error',
+                type: node.type // Add type for clarity
+            };
+
+            executionLogs.push({
+                ...logEntry,
+                success: result.success, // Keep compatibility with local logs
                 result: result,
-                outputHandle: result.outputHandle // Log which handle was taken
+                outputHandle: result.outputHandle
             });
+
+            // Update DB execution logs
+            execution.logs.push(logEntry as any);
+            // Optional: await execution.save(); // Save progressively if needed, but might be slow
 
             if (!result.success) {
                 console.error(`❌ Node ${node.id} failed:`, result.error);
@@ -139,6 +169,14 @@ export async function executeWorkflow(
             }
         }
 
+        // Mark execution as completed
+        execution.status = 'completed';
+        execution.completedAt = new Date();
+        execution.outputData = previousOutput; // Final output
+        execution.result = results;
+
+        await execution.save();
+
         return {
             status: 'success',
             workflowId: workflow.id,
@@ -147,6 +185,12 @@ export async function executeWorkflow(
         };
 
     } catch (error: any) {
+        // Mark execution as failed
+        execution.status = 'failed';
+        execution.error = error.message;
+        execution.completedAt = new Date();
+        await execution.save();
+
         console.error('❌ Workflow execution failed:', error);
         return {
             status: 'failed',

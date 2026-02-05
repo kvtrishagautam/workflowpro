@@ -84,4 +84,5 @@ export interface Workflow {
     webhookUrl: string;
     createdAt?: Date;
     updatedAt?: Date;
+    _id?: any;
 }

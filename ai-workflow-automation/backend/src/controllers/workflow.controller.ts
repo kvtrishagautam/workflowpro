@@ -140,14 +140,12 @@ export const executeWorkflow = async (req: AuthRequest, res: Response): Promise<
             return;
         }
 
-        // Import execution service
-        const { workflowExecutionService } = await import('../services/workflowExecution.service');
+        // Execute the workflow using the unified execution service
+        const { executeWorkflow } = await import('../services/executionService');
 
         // Execute the workflow
-        const result = await workflowExecutionService.executeWorkflow(
-            workflow._id.toString(),
-            workflow.nodes,
-            workflow.edges,
+        const result = await executeWorkflow(
+            workflow as any,
             req.body.triggerData || {}
         );
 
