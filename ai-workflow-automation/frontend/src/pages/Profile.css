@@ -173,3 +173,155 @@
     border-radius: 6px;
     cursor: pointer;
 }
+
+/* Workflow Card Wrapper */
+.workflow-card-wrapper {
+    position: relative;
+}
+
+.delete-workflow-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.workflow-card-wrapper:hover .delete-workflow-btn {
+    opacity: 1;
+}
+
+.delete-workflow-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    transform: scale(1.1);
+}
+
+/* Delete Confirmation Dialog */
+.delete-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.delete-dialog {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    min-width: 400px;
+    max-width: 500px;
+    animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.delete-dialog-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.delete-dialog-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #dc2626;
+}
+
+.delete-dialog-body {
+    padding: 1.5rem;
+}
+
+.delete-dialog-body p {
+    margin: 0.5rem 0;
+    color: #475569;
+}
+
+.workflow-name-highlight {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 1.125rem;
+}
+
+.warning-text {
+    color: #dc2626;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.delete-dialog-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.cancel-btn,
+.confirm-delete-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancel-btn {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.confirm-delete-btn {
+    background: #dc2626;
+    border: none;
+    color: white;
+}
+
+.confirm-delete-btn:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+.cancel-btn:disabled,
+.confirm-delete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

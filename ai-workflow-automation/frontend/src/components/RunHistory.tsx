@@ -6,6 +6,8 @@ import './RunHistory.css';
 const RunHistory: React.FC = () => {
     const [runs, setRuns] = useState<WorkflowRun[]>([]);
     const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
 
     useEffect(() => {
         // Initial load
@@ -20,11 +22,20 @@ const RunHistory: React.FC = () => {
     }, []);
 
     const handleClearRuns = () => {
-        if (window.confirm('Clear all workflow runs?')) {
-            clearRuns();
-            setRuns([]);
-            setExpandedRunId(null);
-        }
+        setShowClearConfirm(true);
+    };
+
+    const handleConfirmClear = () => {
+        setIsClearing(true);
+        clearRuns();
+        setRuns([]);
+        setExpandedRunId(null);
+        setShowClearConfirm(false);
+        setIsClearing(false);
+    };
+
+    const handleCancelClear = () => {
+        setShowClearConfirm(false);
     };
 
     const toggleExpand = (runId: string) => {
@@ -181,6 +192,38 @@ const RunHistory: React.FC = () => {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Clear Confirmation Dialog */}
+            {showClearConfirm && (
+                <div className="clear-dialog-overlay" onClick={handleCancelClear}>
+                    <div className="clear-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="clear-dialog-header">
+                            <h2>⚠️ Clear All Runs</h2>
+                        </div>
+                        <div className="clear-dialog-body">
+                            <p>Are you sure you want to clear all workflow runs?</p>
+                            <p className="clear-count-text">{runs.length} run{runs.length !== 1 ? 's' : ''} will be deleted</p>
+                            <p className="warning-text">This action cannot be undone.</p>
+                        </div>
+                        <div className="clear-dialog-footer">
+                            <button
+                                className="cancel-btn"
+                                onClick={handleCancelClear}
+                                disabled={isClearing}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="confirm-clear-btn"
+                                onClick={handleConfirmClear}
+                                disabled={isClearing}
+                            >
+                                {isClearing ? 'Clearing...' : 'Clear All'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

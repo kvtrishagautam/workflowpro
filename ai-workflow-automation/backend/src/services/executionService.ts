@@ -4,6 +4,13 @@ import { conditionExecutor } from '../executors/condition.executor';
 import { filterExecutor } from '../executors/filter.executor';
 import { googleSheetsExecutor } from '../executors/googleSheets.executor';
 import { emailExecutor } from '../executors/email.executor';
+import { whatsappExecutor } from '../executors/whatsapp.executor';
+import { httpExecutor } from '../executors/http.executor';
+import { delayExecutor } from '../executors/delay.executor';
+import { databaseExecutor } from '../executors/database.executor';
+import { javascriptExecutor } from '../executors/javascript.executor';
+import { setExecutor } from '../executors/set.executor';
+import { discordExecutor } from '../executors/discord.executor';
 import { ExecutionContext, ExecutionResult, WorkflowNode } from '../types';
 import { WorkflowExecution } from '../models/WorkflowExecution';
 
@@ -123,6 +130,28 @@ export async function executeWorkflow(
                     break;
                 case 'email':
                     result = await emailExecutor.execute(executionContext);
+                    break;
+                case 'whatsapp':
+                    result = await whatsappExecutor.execute(executionContext);
+                    break;
+                case 'http':
+                    result = await httpExecutor.execute(executionContext);
+                    break;
+                case 'delay':
+                    result = await delayExecutor.execute(executionContext);
+                    break;
+                case 'database':
+                    result = await databaseExecutor.execute(executionContext);
+                    break;
+                case 'javascript':
+                case 'code':
+                    result = await javascriptExecutor.execute(executionContext);
+                    break;
+                case 'set':
+                    result = await setExecutor.execute(executionContext);
+                    break;
+                case 'discord':
+                    result = await discordExecutor.execute(executionContext);
                     break;
                 case 'webhook':
                     result = { success: true, data: payload };

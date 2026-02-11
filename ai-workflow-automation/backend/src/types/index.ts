@@ -5,7 +5,7 @@ export interface NodeData {
 
 export interface WorkflowNode {
     id: string;
-    type: 'webhook' | 'javascript' | 'slack' | 'http' | 'conditional' | 'delay' | 'filter' | 'googleSheets' | 'email';
+    type: 'webhook' | 'javascript' | 'code' | 'slack' | 'http' | 'conditional' | 'delay' | 'filter' | 'googleSheets' | 'email' | 'whatsapp' | 'database' | 'set' | 'discord';
     data: NodeData;
     position: { x: number; y: number };
 }

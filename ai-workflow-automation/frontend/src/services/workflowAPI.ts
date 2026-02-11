@@ -76,6 +76,21 @@ export class WorkflowAPI {
     }
 
     /**
+     * Delete a workflow by ID
+     */
+    static async deleteWorkflow(id: string): Promise<void> {
+        const response = await fetch(`${BACKEND_URL}/workflows/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete workflow');
+        }
+    }
+
+    /**
      * Trigger a webhook manually (for testing)
      */
     static async triggerWebhook(

@@ -1,0 +1,169 @@
+{
+    "id": "nathans-sales-workflow",
+    "name": "Nathan's Sales Order Processing",
+    "description": "Automated workflow to fetch orders, filter by status, store processing orders in Google Sheets, calculate booked order totals, and notify team on Discord",
+    "isActive": false,
+    "webhookUrl": "/webhook/nathans-orders",
+    "nodes": [
+        {
+            "id": "node-1-webhook",
+            "type": "webhook",
+            "data": {
+                "label": "Webhook Trigger",
+                "config": {
+                    "path": "/nathans-orders",
+                    "method": "POST",
+                    "authentication": "none"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 200
+            }
+        },
+        {
+            "id": "node-2-http",
+            "type": "http",
+            "data": {
+                "label": "Get Orders from API",
+                "config": {
+                    "method": "GET",
+                    "url": "https://jsonplaceholder.typicode.com/users",
+                    "headers": {},
+                    "authType": "none"
+                }
+            },
+            "position": {
+                "x": 300,
+                "y": 200
+            }
+        },
+        {
+            "id": "node-3-conditional",
+            "type": "conditional",
+            "data": {
+                "label": "Filter by Order Status",
+                "config": {
+                    "conditionType": "simple",
+                    "field": "orderStatus",
+                    "operator": "equals",
+                    "value": "processing"
+                }
+            },
+            "position": {
+                "x": 500,
+                "y": 200
+            }
+        },
+        {
+            "id": "node-4-set",
+            "type": "set",
+            "data": {
+                "label": "Select Fields for Processing Orders",
+                "config": {
+                    "fields": [
+                        {
+                            "name": "employeeName",
+                            "value": "${data.employeeName}"
+                        },
+                        {
+                            "name": "orderID",
+                            "value": "${data.orderID}"
+                        }
+                    ],
+                    "includeOtherFields": false
+                }
+            },
+            "position": {
+                "x": 700,
+                "y": 100
+            }
+        },
+        {
+            "id": "node-5-googlesheets",
+            "type": "googleSheets",
+            "data": {
+                "label": "Insert Processing Orders to Sheets",
+                "config": {
+                    "operation": "append",
+                    "spreadsheetId": "YOUR_SPREADSHEET_ID_HERE",
+                    "sheetName": "processingOrders",
+                    "range": "A:B",
+                    "values": [
+                        "${data.orderID}",
+                        "${data.employeeName}"
+                    ],
+                    "serviceAccountJson": "YOUR_SERVICE_ACCOUNT_JSON_OR_OAUTH_TOKEN"
+                }
+            },
+            "position": {
+                "x": 900,
+                "y": 100
+            }
+        },
+        {
+            "id": "node-6-javascript",
+            "type": "javascript",
+            "data": {
+                "label": "Calculate Booked Orders Total",
+                "config": {
+                    "code": "// Calculate total booked orders and sum\nlet items = data.httpResult?.data || [];\nlet totalBooked = 0;\nlet bookedSum = 0;\n\n// Filter booked orders and calculate\nfor (let i = 0; i < items.length; i++) {\n  if (items[i].orderStatus === 'booked') {\n    totalBooked++;\n    bookedSum += items[i].orderPrice || 0;\n  }\n}\n\n// Return the calculations\nreturn {\n  ...data,\n  totalBooked: totalBooked,\n  bookedSum: bookedSum\n};"
+                }
+            },
+            "position": {
+                "x": 700,
+                "y": 300
+            }
+        },
+        {
+            "id": "node-7-discord",
+            "type": "discord",
+            "data": {
+                "label": "Notify Team on Discord",
+                "config": {
+                    "message": "📊 **Weekly Booked Orders Report**\\n\\nThis week we have **${data.totalBooked}** booked orders with a total value of **$${data.bookedSum}**.\\n\\nGreat work team! 🎉",
+                    "webhookUrl": "",
+                    "username": "Sales Bot"
+                }
+            },
+            "position": {
+                "x": 900,
+                "y": 300
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "edge-1-2",
+            "source": "node-1-webhook",
+            "target": "node-2-http"
+        },
+        {
+            "id": "edge-2-3",
+            "source": "node-2-http",
+            "target": "node-3-conditional"
+        },
+        {
+            "id": "edge-3-4-true",
+            "source": "node-3-conditional",
+            "target": "node-4-set",
+            "sourceHandle": "true"
+        },
+        {
+            "id": "edge-4-5",
+            "source": "node-4-set",
+            "target": "node-5-googlesheets"
+        },
+        {
+            "id": "edge-3-6-false",
+            "source": "node-3-conditional",
+            "target": "node-6-javascript",
+            "sourceHandle": "false"
+        },
+        {
+            "id": "edge-6-7",
+            "source": "node-6-javascript",
+            "target": "node-7-discord"
+        }
+    ]
+}

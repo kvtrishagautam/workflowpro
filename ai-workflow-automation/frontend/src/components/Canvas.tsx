@@ -507,9 +507,19 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         const targetDims = getNodeDimensions(targetNode.id);
 
                         // Calculate connection points
-                        // Output connector is at the bottom center of the source node
-                        const x1 = sourceNode.position.x + sourceDims.width / 2;
-                        const y1 = sourceNode.position.y + sourceDims.height;
+                        // For conditional nodes with handles, use the specific handle position
+                        let x1, y1;
+                        if (sourceNode.type === 'conditional' && edge.sourceHandle) {
+                            // True handle is at 70%, False handle is at 30%
+                            const handleOffset = edge.sourceHandle === 'true' ? 0.7 : 0.3;
+                            x1 = sourceNode.position.x + (sourceDims.width * handleOffset);
+                            y1 = sourceNode.position.y + sourceDims.height;
+                        } else {
+                            // Default: output connector at bottom center
+                            x1 = sourceNode.position.x + sourceDims.width / 2;
+                            y1 = sourceNode.position.y + sourceDims.height;
+                        }
+
                         // Input connector is at the top center of the target node
                         const x2 = targetNode.position.x + targetDims.width / 2;
                         const y2 = targetNode.position.y;
@@ -526,6 +536,20 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
                         const isHovered = hoveredEdge === edge.id;
                         const isSelected = selectedEdge === edge.id;
+
+                        // Determine color based on branch type
+                        const isTrueBranch = edge.sourceHandle === 'true';
+                        const isFalseBranch = edge.sourceHandle === 'false';
+                        let strokeColor = '#7c3aed'; // Default purple
+                        let markerColor = '#7c3aed';
+
+                        if (isTrueBranch) {
+                            strokeColor = '#22c55e'; // Green for true
+                            markerColor = '#22c55e';
+                        } else if (isFalseBranch) {
+                            strokeColor = '#ef4444'; // Red for false
+                            markerColor = '#ef4444';
+                        }
 
                         return (
                             <g key={edge.id}>
@@ -548,6 +572,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                                     className={`connection ${isSelected ? 'connection-selected' : isHovered ? 'connection-hover' : ''
                                         }`}
                                     d={path}
+                                    stroke={isSelected || isHovered ? undefined : strokeColor}
                                     markerEnd={`url(#arrowhead${isSelected ? '-selected' : isHovered ? '-hover' : ''})`}
                                     style={{ pointerEvents: 'none' }}
                                 />
@@ -561,8 +586,19 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         if (!sourceNode) return null;
 
                         const sourceDims = getNodeDimensions(sourceNode.id);
-                        const x1 = sourceNode.position.x + sourceDims.width / 2;
-                        const y1 = sourceNode.position.y + sourceDims.height;
+
+                        // Calculate start position based on handle type
+                        let x1, y1;
+                        if (sourceNode.type === 'conditional' && connectionStart.handle) {
+                            // True handle is at 70%, False handle is at 30%
+                            const handleOffset = connectionStart.handle === 'true' ? 0.7 : 0.3;
+                            x1 = sourceNode.position.x + (sourceDims.width * handleOffset);
+                            y1 = sourceNode.position.y + sourceDims.height;
+                        } else {
+                            x1 = sourceNode.position.x + sourceDims.width / 2;
+                            y1 = sourceNode.position.y + sourceDims.height;
+                        }
+
                         const x2 = connectionEnd.x;
                         const y2 = connectionEnd.y;
 
@@ -574,10 +610,23 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         const cx2 = x2;
                         const cy2 = y2 - curveStrength;
 
+                        // Color based on handle
+                        let strokeColor = '#a78bfa'; // Default purple
+                        if (connectionStart.handle === 'true') {
+                            strokeColor = '#22c55e'; // Green
+                        } else if (connectionStart.handle === 'false') {
+                            strokeColor = '#ef4444'; // Red
+                        }
+
                         return (
                             <path
                                 className="connection-preview"
                                 d={`M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`}
+                                stroke={strokeColor}
+                                strokeWidth="2"
+                                strokeDasharray="5,5"
+                                fill="none"
+                                opacity="0.6"
                                 markerEnd="url(#arrowhead-preview)"
                             />
                         );

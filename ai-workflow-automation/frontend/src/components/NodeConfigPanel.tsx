@@ -348,97 +348,56 @@ const WhatsAppConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
             <h4>WhatsApp Business Settings</h4>
 
             <div className="form-group">
-                <label>Operation</label>
-                <select
-                    value={config.operation || 'sendMessage'}
-                    onChange={(e) => updateConfig('operation', e.target.value)}
-                >
-                    <option value="sendMessage">Send Text Message</option>
-                    <option value="sendTemplate">Send Template Message</option>
-                    <option value="sendMedia">Send Media</option>
-                </select>
+                <label>Phone Number ID</label>
+                <input
+                    type="text"
+                    value={config.phoneNumberId || ''}
+                    onChange={(e) => updateConfig('phoneNumberId', e.target.value)}
+                    placeholder="123456789012345"
+                />
+                <small className="help-text">
+                    Found in your Meta WhatsApp Business dashboard
+                </small>
             </div>
 
             <div className="form-group">
-                <label>Phone Number</label>
+                <label>Access Token</label>
                 <input
-                    type="text"
-                    value={config.phoneNumber || ''}
-                    onChange={(e) => updateConfig('phoneNumber', e.target.value)}
-                    placeholder="+1234567890"
+                    type="password"
+                    value={config.accessToken || ''}
+                    onChange={(e) => updateConfig('accessToken', e.target.value)}
+                    placeholder="Your WhatsApp API access token"
                 />
-                <small className="help-text">Include country code without spaces</small>
+                <small className="help-text">
+                    Generate from Meta Developer Portal
+                </small>
             </div>
 
-            {config.operation === 'sendMessage' && (
-                <div className="form-group">
-                    <label>Message</label>
-                    <textarea
-                        value={config.message || ''}
-                        onChange={(e) => updateConfig('message', e.target.value)}
-                        placeholder="Your message here..."
-                        rows={4}
-                    />
-                </div>
-            )}
+            <div className="form-group">
+                <label>Recipient Phone Number</label>
+                <input
+                    type="text"
+                    value={config.to || ''}
+                    onChange={(e) => updateConfig('to', e.target.value)}
+                    placeholder='${data.phone} or +1234567890'
+                />
+                <small className="help-text">
+                    Include country code. Supports variables like ${'{data.phone}'}
+                </small>
+            </div>
 
-            {config.operation === 'sendTemplate' && (
-                <>
-                    <div className="form-group">
-                        <label>Template Name</label>
-                        <input
-                            type="text"
-                            value={config.templateName || ''}
-                            onChange={(e) => updateConfig('templateName', e.target.value)}
-                            placeholder="hello_world"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Template Language</label>
-                        <input
-                            type="text"
-                            value={config.templateLanguage || 'en'}
-                            onChange={(e) => updateConfig('templateLanguage', e.target.value)}
-                            placeholder="en"
-                        />
-                    </div>
-                </>
-            )}
-
-            {config.operation === 'sendMedia' && (
-                <>
-                    <div className="form-group">
-                        <label>Media Type</label>
-                        <select
-                            value={config.mediaType || 'image'}
-                            onChange={(e) => updateConfig('mediaType', e.target.value)}
-                        >
-                            <option value="image">Image</option>
-                            <option value="video">Video</option>
-                            <option value="document">Document</option>
-                            <option value="audio">Audio</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Media URL</label>
-                        <input
-                            type="url"
-                            value={config.mediaUrl || ''}
-                            onChange={(e) => updateConfig('mediaUrl', e.target.value)}
-                            placeholder="https://example.com/image.jpg"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Caption (Optional)</label>
-                        <input
-                            type="text"
-                            value={config.caption || ''}
-                            onChange={(e) => updateConfig('caption', e.target.value)}
-                            placeholder="Media caption"
-                        />
-                    </div>
-                </>
-            )}
+            <div className="form-group">
+                <label>Message</label>
+                <textarea
+                    value={config.message || ''}
+                    onChange={(e) => updateConfig('message', e.target.value)}
+                    placeholder='Hello ${data.name}, thanks for reaching out!'
+                    rows={4}
+                />
+                <small className="help-text">
+                    Supports variables like ${'{data.fieldName}'}
+                </small>
+            </div>
         </div>
     );
 };
@@ -1430,16 +1389,16 @@ const HTTPConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                         <label>Username</label>
                         <input
                             type="text"
-                            value={config.username || ''}
-                            onChange={(e) => updateConfig('username', e.target.value)}
+                            value={config.basicAuthUsername || ''}
+                            onChange={(e) => updateConfig('basicAuthUsername', e.target.value)}
                         />
                     </div>
                     <div className="form-group">
                         <label>Password</label>
                         <input
                             type="password"
-                            value={config.password || ''}
-                            onChange={(e) => updateConfig('password', e.target.value)}
+                            value={config.basicAuthPassword || ''}
+                            onChange={(e) => updateConfig('basicAuthPassword', e.target.value)}
                         />
                     </div>
                 </>
@@ -1450,8 +1409,8 @@ const HTTPConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                     <label>Token</label>
                     <input
                         type="password"
-                        value={config.token || ''}
-                        onChange={(e) => updateConfig('token', e.target.value)}
+                        value={config.bearerToken || ''}
+                        onChange={(e) => updateConfig('bearerToken', e.target.value)}
                         placeholder="Bearer token"
                     />
                 </div>
@@ -1623,15 +1582,14 @@ const DelayConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                     <div className="inline-inputs">
                         <input
                             type="number"
-                            value={config.delayValue || 5}
-                            onChange={(e) => updateConfig('delayValue', parseInt(e.target.value))}
+                            value={config.amount || 5}
+                            onChange={(e) => updateConfig('amount', parseInt(e.target.value))}
                             min="1"
                         />
                         <select
-                            value={config.delayUnit || 'seconds'}
-                            onChange={(e) => updateConfig('delayUnit', e.target.value)}
+                            value={config.unit || 'seconds'}
+                            onChange={(e) => updateConfig('unit', e.target.value)}
                         >
-                            <option value="milliseconds">Milliseconds</option>
                             <option value="seconds">Seconds</option>
                             <option value="minutes">Minutes</option>
                             <option value="hours">Hours</option>

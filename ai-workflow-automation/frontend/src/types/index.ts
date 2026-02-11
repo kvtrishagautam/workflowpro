@@ -10,12 +10,12 @@ export interface NodeData {
 }
 
 // All supported node types
-export type NodeTypeValue = 
-    | 'webhook' 
-    | 'javascript' 
-    | 'slack' 
-    | 'http' 
-    | 'conditional' 
+export type NodeTypeValue =
+    | 'webhook'
+    | 'javascript'
+    | 'slack'
+    | 'http'
+    | 'conditional'
     | 'delay'
     | 'schedule'
     | 'email'
@@ -65,7 +65,7 @@ export const NODE_TYPES = {
     // Triggers
     WEBHOOK: 'webhook',
     SCHEDULE: 'schedule',
-    
+
     // Core Logic
     JAVASCRIPT: 'javascript',
     CONDITIONAL: 'conditional',
@@ -74,24 +74,24 @@ export const NODE_TYPES = {
     FILTER: 'filter',
     MERGE: 'merge',
     SPLIT_BATCHES: 'splitBatches',
-    
+
     // HTTP & APIs
     HTTP: 'http',
-    
+
     // Communication
     SLACK: 'slack',
     EMAIL: 'email',
     WHATSAPP: 'whatsapp',
     TELEGRAM: 'telegram',
     DISCORD: 'discord',
-    
+
     // Data & Storage
     GOOGLE_SHEETS: 'googleSheets',
     AIRTABLE: 'airtable',
     NOTION: 'notion',
     MYSQL: 'mysql',
     POSTGRES: 'postgres',
-    
+
     // AI
     OPENAI: 'openai',
 };
@@ -107,7 +107,7 @@ export interface NodeConfig {
 }
 
 // Node categories for organization
-export type NodeCategory = 
+export type NodeCategory =
     | 'triggers'
     | 'logic'
     | 'communication'
@@ -309,10 +309,10 @@ export interface SetConfig {
 export interface FilterConfig {
     conditions: {
         field: string;
-        operator: 'equals' | 'notEquals' | 'contains' | 'notContains' | 
-                  'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' |
-                  'greaterOrEqual' | 'lessOrEqual' | 'isEmpty' | 'isNotEmpty' |
-                  'regex' | 'isTrue' | 'isFalse';
+        operator: 'equals' | 'notEquals' | 'contains' | 'notContains' |
+        'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' |
+        'greaterOrEqual' | 'lessOrEqual' | 'isEmpty' | 'isNotEmpty' |
+        'regex' | 'isTrue' | 'isFalse';
         value: any;
     }[];
     combineConditions: 'AND' | 'OR';

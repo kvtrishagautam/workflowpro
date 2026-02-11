@@ -1,0 +1,149 @@
+{
+    "id": "nathans-workflow-test",
+    "name": "Nathan's Workflow (Test with Mock Data)",
+    "description": "Test version of Nathan's workflow using mock data instead of external API",
+    "isActive": false,
+    "webhookUrl": "/webhook/nathans-test",
+    "nodes": [
+        {
+            "id": "node-1-webhook",
+            "type": "webhook",
+            "data": {
+                "label": "Webhook Trigger",
+                "config": {
+                    "path": "/nathans-test",
+                    "method": "POST",
+                    "authentication": "none"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 200
+            }
+        },
+        {
+            "id": "node-2-javascript-mock",
+            "type": "javascript",
+            "data": {
+                "label": "Generate Mock Order Data",
+                "config": {
+                    "code": "// Generate 30 mock orders (like n8n tutorial)\nconst orders = [\n  { orderID: 1, customerID: 101, employeeName: 'Alice', orderPrice: 1200, orderStatus: 'processing' },\n  { orderID: 2, customerID: 102, employeeName: 'Bob', orderPrice: 850, orderStatus: 'booked' },\n  { orderID: 3, customerID: 103, employeeName: 'Charlie', orderPrice: 2100, orderStatus: 'processing' },\n  { orderID: 4, customerID: 104, employeeName: 'Diana', orderPrice: 650, orderStatus: 'booked' },\n  { orderID: 5, customerID: 105, employeeName: 'Eve', orderPrice: 3200, orderStatus: 'processing' },\n  { orderID: 6, customerID: 106, employeeName: 'Frank', orderPrice: 1800, orderStatus: 'booked' },\n  { orderID: 7, customerID: 107, employeeName: 'Grace', orderPrice: 920, orderStatus: 'processing' },\n  { orderID: 8, customerID: 108, employeeName: 'Henry', orderPrice: 1400, orderStatus: 'booked' },\n  { orderID: 9, customerID: 109, employeeName: 'Iris', orderPrice: 560, orderStatus: 'processing' },\n  { orderID: 10, customerID: 110, employeeName: 'Jack', orderPrice: 2900, orderStatus: 'booked' },\n  { orderID: 11, customerID: 111, employeeName: 'Alice', orderPrice: 780, orderStatus: 'processing' },\n  { orderID: 12, customerID: 112, employeeName: 'Bob', orderPrice: 1650, orderStatus: 'booked' },\n  { orderID: 13, customerID: 113, employeeName: 'Charlie', orderPrice: 1100, orderStatus: 'processing' },\n  { orderID: 14, customerID: 114, employeeName: 'Diana', orderPrice: 2300, orderStatus: 'booked' },\n  { orderID: 15, customerID: 115, employeeName: 'Eve', orderPrice: 990, orderStatus: 'processing' },\n  { orderID: 16, customerID: 116, employeeName: 'Frank', orderPrice: 3100, orderStatus: 'booked' },\n  { orderID: 17, customerID: 117, employeeName: 'Grace', orderPrice: 430, orderStatus: 'processing' },\n  { orderID: 18, customerID: 118, employeeName: 'Henry', orderPrice: 1250, orderStatus: 'booked' },\n  { orderID: 19, customerID: 119, employeeName: 'Iris', orderPrice: 1890, orderStatus: 'processing' },\n  { orderID: 20, customerID: 120, employeeName: 'Jack', orderPrice: 2400, orderStatus: 'booked' },\n  { orderID: 21, customerID: 121, employeeName: 'Alice', orderPrice: 670, orderStatus: 'processing' },\n  { orderID: 22, customerID: 122, employeeName: 'Bob', orderPrice: 3400, orderStatus: 'booked' },\n  { orderID: 23, customerID: 123, employeeName: 'Charlie', orderPrice: 820, orderStatus: 'processing' },\n  { orderID: 24, customerID: 124, employeeName: 'Diana', orderPrice: 1900, orderStatus: 'booked' },\n  { orderID: 25, customerID: 125, employeeName: 'Eve', orderPrice: 1320, orderStatus: 'processing' },\n  { orderID: 26, customerID: 126, employeeName: 'Frank', orderPrice: 2700, orderStatus: 'booked' },\n  { orderID: 27, customerID: 127, employeeName: 'Grace', orderPrice: 540, orderStatus: 'processing' },\n  { orderID: 28, customerID: 128, employeeName: 'Henry', orderPrice: 2100, orderStatus: 'booked' },\n  { orderID: 29, customerID: 129, employeeName: 'Iris', orderPrice: 1480, orderStatus: 'booked' },\n  { orderID: 30, customerID: 130, employeeName: 'Jack', orderPrice: 950, orderStatus: 'booked' }\n];\n\nreturn { ...data, orders: orders };"
+                }
+            },
+            "position": {
+                "x": 300,
+                "y": 200
+            }
+        },
+        {
+            "id": "node-3-conditional",
+            "type": "conditional",
+            "data": {
+                "label": "Check Order Status",
+                "config": {
+                    "conditionType": "simple",
+                    "field": "orderStatus",
+                    "operator": "equals",
+                    "value": "processing"
+                }
+            },
+            "position": {
+                "x": 500,
+                "y": 200
+            }
+        },
+        {
+            "id": "node-4-javascript-calc",
+            "type": "javascript",
+            "data": {
+                "label": "Calculate Booked Orders",
+                "config": {
+                    "code": "// Calculate booked orders (false branch - not processing)\nconst orders = data.orders || [];\nlet totalBooked = 0;\nlet bookedSum = 0;\n\nfor (let order of orders) {\n  if (order.orderStatus === 'booked') {\n    totalBooked++;\n    bookedSum += order.orderPrice;\n  }\n}\n\nreturn {\n  ...data,\n  totalBooked: totalBooked,\n  bookedSum: bookedSum,\n  message: `This week we have ${totalBooked} booked orders with a total value of $${bookedSum}`\n};"
+                }
+            },
+            "position": {
+                "x": 700,
+                "y": 300
+            }
+        },
+        {
+            "id": "node-5-discord",
+            "type": "discord",
+            "data": {
+                "label": "Notify Team (Booked Orders)",
+                "config": {
+                    "message": "📊 **Weekly Booked Orders Report**\\n\\n${data.message}\\n\\nGreat work team! 🎉",
+                    "webhookUrl": "",
+                    "username": "Sales Bot"
+                }
+            },
+            "position": {
+                "x": 900,
+                "y": 300
+            }
+        },
+        {
+            "id": "node-6-javascript-filter",
+            "type": "javascript",
+            "data": {
+                "label": "Filter Processing Orders",
+                "config": {
+                    "code": "// Filter processing orders (true branch)\nconst orders = data.orders || [];\nconst processingOrders = orders.filter(order => order.orderStatus === 'processing');\n\nconsole.log(`Found ${processingOrders.length} processing orders`);\n\nreturn {\n  ...data,\n  processingOrders: processingOrders,\n  processingCount: processingOrders.length\n};"
+                }
+            },
+            "position": {
+                "x": 700,
+                "y": 100
+            }
+        },
+        {
+            "id": "node-7-slack",
+            "type": "slack",
+            "data": {
+                "label": "Log Processing Orders",
+                "config": {
+                    "message": "✅ Found ${data.processingCount} processing orders that need follow-up:\\n\\nFirst 5: ${data.processingOrders.slice(0,5).map(o => `Order #${o.orderID} - ${o.employeeName}`).join(', ')}",
+                    "webhookUrl": ""
+                }
+            },
+            "position": {
+                "x": 900,
+                "y": 100
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "edge-1-2",
+            "source": "node-1-webhook",
+            "target": "node-2-javascript-mock"
+        },
+        {
+            "id": "edge-2-3",
+            "source": "node-2-javascript-mock",
+            "target": "node-3-conditional"
+        },
+        {
+            "id": "edge-3-4-false",
+            "source": "node-3-conditional",
+            "target": "node-4-javascript-calc",
+            "sourceHandle": "false"
+        },
+        {
+            "id": "edge-4-5",
+            "source": "node-4-javascript-calc",
+            "target": "node-5-discord"
+        },
+        {
+            "id": "edge-3-6-true",
+            "source": "node-3-conditional",
+            "target": "node-6-javascript-filter",
+            "sourceHandle": "true"
+        },
+        {
+            "id": "edge-6-7",
+            "source": "node-6-javascript-filter",
+            "target": "node-7-slack"
+        }
+    ]
+}
