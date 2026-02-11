@@ -9,8 +9,8 @@ interface WorkflowNodeComponentProps {
     onSelect: (nodeId: string) => void;
     onDelete: (nodeId: string) => void;
     onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
-    onConnectorMouseDown: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => void;
-    onConnectorMouseUp: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => void;
+    onConnectorMouseDown: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', sourceHandle?: string) => void;
+    onConnectorMouseUp: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', sourceHandle?: string) => void;
     onUpdate?: (nodeId: string, updatedNode: NodeProps) => void;
     onOpenWebhookConfig?: (node: NodeProps) => void;
     onOpenNodeConfig?: (node: NodeProps) => void;
@@ -154,8 +154,12 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
 
         switch (node.type) {
             case NODE_TYPES.SCHEDULE:
-                if (config.interval) summary.push({ label: 'Interval', value: `${config.interval} ${config.unit || 'minutes'}` });
+                // Support both old (interval/unit) and new (intervalValue/intervalUnit) config keys
+                const intervalVal = config.intervalValue || config.interval;
+                const intervalUnit = config.intervalUnit || config.unit || 'minutes';
+                if (intervalVal) summary.push({ label: 'Interval', value: `${intervalVal} ${intervalUnit}` });
                 if (config.cronExpression) summary.push({ label: 'Cron', value: config.cronExpression });
+                if (config.mode) summary.push({ label: 'Mode', value: config.mode });
                 break;
             case NODE_TYPES.EMAIL:
                 if (config.to) summary.push({ label: 'To', value: config.to.substring(0, 25) });
@@ -379,18 +383,55 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                     onConnectorMouseUp(e, node.id, 'input');
                 }}
             />
-            <div
-                className="node-connector output-connector"
-                title="Output"
-                onMouseDown={(e) => {
-                    e.stopPropagation();
-                    onConnectorMouseDown(e, node.id, 'output');
-                }}
-                onMouseUp={(e) => {
-                    e.stopPropagation();
-                    onConnectorMouseUp(e, node.id, 'output');
-                }}
-            />
+
+            {/* Conditional nodes have TRUE/FALSE outputs */}
+            {node.type === NODE_TYPES.CONDITIONAL ? (
+                <>
+                    <div
+                        className="node-connector output-connector true-connector"
+                        title="TRUE"
+                        data-output-type="true"
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseDown(e, node.id, 'output', 'true');
+                        }}
+                        onMouseUp={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseUp(e, node.id, 'output', 'true');
+                        }}
+                    >
+                        <span className="connector-label">✓</span>
+                    </div>
+                    <div
+                        className="node-connector output-connector false-connector"
+                        title="FALSE"
+                        data-output-type="false"
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseDown(e, node.id, 'output', 'false');
+                        }}
+                        onMouseUp={(e) => {
+                            e.stopPropagation();
+                            onConnectorMouseUp(e, node.id, 'output', 'false');
+                        }}
+                    >
+                        <span className="connector-label">✗</span>
+                    </div>
+                </>
+            ) : (
+                <div
+                    className="node-connector output-connector"
+                    title="Output"
+                    onMouseDown={(e) => {
+                        e.stopPropagation();
+                        onConnectorMouseDown(e, node.id, 'output');
+                    }}
+                    onMouseUp={(e) => {
+                        e.stopPropagation();
+                        onConnectorMouseUp(e, node.id, 'output');
+                    }}
+                />
+            )}
 
             {/* Context Menu */}
             {showMenu && (

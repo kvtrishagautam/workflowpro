@@ -12,13 +12,18 @@ export async function executeWorkflow(
 
     const run = createRun();
 
-    const startNode = workflow.nodes.find((n) => n.type === 'webhook');
+    // Find trigger node (webhook, schedule, or first node without incoming edges)
+    const startNode = workflow.nodes.find((n) => n.type === 'webhook' || n.type === 'schedule')
+                   || workflow.nodes.find((n) => {
+                       // Find node with no incoming edges (true start node)
+                       return !workflow.edges.some((e) => e.target === n.id);
+                   });
 
     if (!startNode) {
         run.status = 'failed';
         run.finishedAt = Date.now();
         updateRun(run);
-        throw new Error('No webhook trigger node found. Add a webhook node to start the workflow.');
+        throw new Error('No trigger node found. Add a webhook or schedule node to start the workflow.');
     }
 
     const nodeMap = new Map(

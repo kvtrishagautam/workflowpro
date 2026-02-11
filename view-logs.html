@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Logs Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .run-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .run-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .status {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #10b981;
+            color: white;
+        }
+        .status.failed {
+            background: #ef4444;
+            color: white;
+        }
+        .status.running {
+            background: #f59e0b;
+            color: white;
+        }
+        .run-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .meta-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .meta-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .meta-value {
+            font-size: 14px;
+            color: #0f172a;
+        }
+        .logs-section {
+            background: #0f172a;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+            border-radius: 4px;
+        }
+        .log-entry.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+            color: #ef4444;
+        }
+        .no-runs {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        .no-runs-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Workflow Execution Logs</h1>
+        <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh Logs</button>
+        <div id="logs-container"></div>
+    </div>
+
+    <script>
+        function loadLogs() {
+            const container = document.getElementById('logs-container');
+
+            // Try to get logs from localStorage
+            let runs = [];
+            try {
+                const stored = localStorage.getItem('workflow_runs');
+                if (stored) {
+                    runs = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error('Failed to parse workflow runs:', e);
+            }
+
+            if (runs.length === 0) {
+                container.innerHTML = `
+                    <div class="no-runs">
+                        <div class="no-runs-icon">📭</div>
+                        <h2>No Workflow Runs Found</h2>
+                        <p>Go to <a href="http://localhost:3000">http://localhost:3000</a> and click the "▶️ Run" button to execute a workflow.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            runs.forEach((run, index) => {
+                const startedAt = new Date(run.startedAt).toLocaleString();
+                const finishedAt = run.finishedAt ? new Date(run.finishedAt).toLocaleString() : 'In Progress';
+                const duration = run.finishedAt ?
+                    ((run.finishedAt - run.startedAt) / 1000).toFixed(2) + 's' :
+                    'Running...';
+
+                html += `
+                    <div class="run-card">
+                        <div class="run-header">
+                            <h3>Run #${runs.length - index}</h3>
+                            <span class="status ${run.status}">${run.status.toUpperCase()}</span>
+                        </div>
+
+                        <div class="run-meta">
+                            <div class="meta-item">
+                                <div class="meta-label">Started</div>
+                                <div class="meta-value">${startedAt}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Finished</div>
+                                <div class="meta-value">${finishedAt}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Duration</div>
+                                <div class="meta-value">${duration}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Logs</div>
+                                <div class="meta-value">${run.logs.length} entries</div>
+                            </div>
+                        </div>
+
+                        <div class="logs-section">
+                            ${run.logs.length > 0 ?
+                                run.logs.map(log => `
+                                    <div class="log-entry ${log.message.includes('error') || log.message.includes('failed') ? 'error' : ''}">
+                                        <strong>[${log.nodeId || 'System'}]</strong> ${log.message}
+                                    </div>
+                                `).join('') :
+                                '<div class="log-entry">No logs available</div>'
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Load logs on page load
+        loadLogs();
+
+        // Auto-refresh every 5 seconds
+        setInterval(loadLogs, 5000);
+    </script>
+</body>
+</html>
