@@ -113,15 +113,79 @@ async function executeConditional(
     nodeMap: Map<string, NodeProps>,
     run: WorkflowRun
 ): Promise<void> {
-    const rule = node.data.config?.rule;
-    if (!rule) {
-        console.warn(`[WARN] Conditional node ${node.id} has no rule config`);
+    const config = node.data.config || {};
+    let result = false;
+
+    // Support expression-based conditions
+    if (config.conditionType === 'expression' && config.expression) {
+        try {
+            console.log(`[CONDITIONAL] Evaluating expression: ${config.expression}`);
+            console.log(`[CONDITIONAL] Available data keys:`, Object.keys(data));
+
+            // Replace dot notation variables (e.g., openai.response -> data.openai.response)
+            // But exclude method calls (e.g., don't match .includes() part)
+            let expression = config.expression;
+            // Use word boundary \b to ensure we match complete identifiers, not partial ones
+            const varMatches = expression.match(/\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)\b(?!\s*\()/g);
+
+            if (varMatches) {
+                // Deduplicate variables
+                const uniqueVars: string[] = [...new Set<string>(varMatches)];
+
+                uniqueVars.forEach((varPath: string) => {
+                    const parts = varPath.split('.');
+                    let value = data;
+                    for (const part of parts) {
+                        value = value?.[part];
+                    }
+
+                    console.log(`[CONDITIONAL] Variable ${varPath} =`, value);
+
+                    // Always replace the variable, even if undefined
+                    // For undefined, use empty string to prevent eval errors
+                    const replacementValue = value !== undefined ? JSON.stringify(value) : '""';
+                    expression = expression.replace(
+                        new RegExp(varPath.replace(/\./g, '\\.'), 'g'),
+                        replacementValue
+                    );
+                });
+            }
+
+            console.log(`[CONDITIONAL] Transformed expression: ${expression}`);
+
+            // Evaluate the expression
+            result = eval(expression);
+            console.log(`[CONDITIONAL] Expression result: ${result}`);
+        } catch (error) {
+            console.error(`[CONDITIONAL] Error evaluating expression:`, error);
+            result = false;
+        }
+    }
+    // Support rule-based conditions (old format)
+    else if (config.rule) {
+        result = evaluateCondition(config.rule, data);
+        console.log(`[CONDITIONAL] Rule evaluated to ${result}`);
+    }
+    // Support conditions array (Filter node format)
+    else if (config.conditions && Array.isArray(config.conditions)) {
+        const combineOp = config.combineOperation || 'all';
+        const results = config.conditions.map((condition: any) => {
+            return evaluateCondition(condition, data);
+        });
+
+        result = combineOp === 'all'
+            ? results.every(r => r)
+            : results.some(r => r);
+
+        console.log(`[CONDITIONAL] Conditions evaluated to ${result}`);
+    }
+    else {
+        console.warn(`[WARN] Conditional node ${node.id} has no valid condition config`);
         return executeNext(node, data, workflow, nodeMap, run);
     }
 
-    const result = evaluateCondition(rule, data);
     console.log(
-        `[CONDITIONAL] Node ${node.id}: rule evaluated to ${result}`
+        `[CONDITIONAL] Node ${node.id}: condition evaluated to ${result ? 'TRUE' : 'FALSE'}`
     );
 
     const edge = workflow.edges.find(
@@ -132,7 +196,7 @@ async function executeConditional(
 
     if (!edge) {
         console.log(
-            `[INFO] No edge found for ${result ? 'true' : 'false'} branch`
+            `[INFO] No edge found for ${result ? 'TRUE' : 'FALSE'} branch, ending workflow`
         );
         return;
     }
@@ -227,31 +291,37 @@ async function executeHTTP(node: NodeProps, data: any): Promise<any> {
     console.log(`[HTTP] Making ${method} request to ${url}`);
 
     try {
-        const options: RequestInit = {
-            method,
+        // Use backend proxy to avoid CORS issues
+        const proxyResponse = await fetch('http://localhost:4000/api/proxy', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...headers,
             },
-        };
+            body: JSON.stringify({
+                url,
+                method,
+                headers,
+                body: body && method !== 'GET'
+                    ? (typeof body === 'string' ? replaceVariables(body, data) : body)
+                    : undefined,
+            }),
+        });
 
-        if (body && method !== 'GET') {
-            options.body = typeof body === 'string'
-                ? replaceVariables(body, data)
-                : JSON.stringify(body);
+        const proxyData = await proxyResponse.json();
+
+        if (!proxyResponse.ok) {
+            throw new Error(proxyData.message || 'Proxy request failed');
         }
 
-        const response = await fetch(url, options);
-        const responseData = await response.json();
-
-        console.log(`[HTTP] Response status: ${response.status}`);
+        console.log(`[HTTP] Response status: ${proxyData.status}`);
 
         return {
             ...data,
             http: {
-                statusCode: response.status,
-                headers: Object.fromEntries(response.headers.entries()),
-                body: responseData,
+                statusCode: proxyData.status,
+                headers: proxyData.headers,
+                body: proxyData.data,
+                response: proxyData.data, // Also include as 'response' for easier access
             },
         };
     } catch (error) {
@@ -518,10 +588,13 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
     const message = replaceVariables(config.message || '', data);
     const chatId = config.chatId || '';
-    const botToken = config.botToken || '';
+    // Check both credentials.botToken (new format) and botToken (old format)
+    const botToken = config.credentials?.botToken || config.botToken || '';
 
-    console.log(`[TELEGRAM] Sending message to chat ${chatId}`);
-    console.log(`[TELEGRAM] Message: ${message}`);
+    console.log(`[TELEGRAM] Chat ID: ${chatId}`);
+    console.log(`[TELEGRAM] Bot Token: ${botToken ? '***configured***' : 'MISSING'}`);
+    console.log(`[TELEGRAM] Has credentials object:`, !!config.credentials);
+    console.log(`[TELEGRAM] Message: ${message.substring(0, 100)}...`);
 
     if (!botToken || !chatId) {
         console.warn('[TELEGRAM] Missing bot token or chat ID - simulating send');
@@ -747,6 +820,27 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
 
     if (!apiKey) {
         console.warn('[OPENAI] No API key configured - simulating response');
+        // Create a realistic simulated response that matches the expected format
+        const simulatedResponse = `1. Importance Level: HIGH
+
+2. Quick Summary
+Major technology announcements and breaking developments in the tech industry. Multiple significant stories covering innovation, product launches, and industry-changing news.
+
+3. Top Headlines
+• Revolutionary AI breakthrough announced
+• Major tech company launches new product line
+• Industry leader announces strategic partnership
+
+4. Key Trends
+- Artificial Intelligence advancement
+- Cloud computing expansion
+- Cybersecurity innovations
+
+5. Why This Matters
+These developments represent significant shifts in the technology landscape that will impact businesses and consumers. The announcements signal major industry changes and innovation acceleration.
+
+🤖 [Simulated Response - Configure API key for real analysis]`;
+
         return {
             ...data,
             openai: {
@@ -754,7 +848,7 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
                 operation,
                 systemPrompt,
                 userPrompt,
-                response: 'This is a simulated OpenAI response. Configure an API key to get real results.',
+                response: simulatedResponse,
                 timestamp: Date.now(),
             },
         };
@@ -1033,7 +1127,14 @@ function replaceVariables(template: string, data: any): string {
 
     return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
         const value = getNestedProperty(data, path.trim());
-        return value !== undefined ? String(value) : match;
+        if (value === undefined) return match;
+
+        // Properly handle objects and arrays
+        if (typeof value === 'object') {
+            return JSON.stringify(value, null, 2);
+        }
+
+        return String(value);
     });
 }
 

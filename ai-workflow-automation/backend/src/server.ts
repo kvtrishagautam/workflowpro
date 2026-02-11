@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import webhookRoutes from './routes/webhookRoutes';
+import proxyRoutes from './routes/proxyRoutes';
 
 const app = express();
 const PORT = 4000;
@@ -20,6 +21,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use(webhookRoutes);
+app.use(proxyRoutes);
 
 // 404 handler
 app.use((req, res) => {

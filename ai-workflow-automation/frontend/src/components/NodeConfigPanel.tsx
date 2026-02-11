@@ -46,6 +46,11 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
         setConfig(newConfig);
     };
 
+    const updateConfigBatch = (updates: Record<string, any>) => {
+        const newConfig = { ...config, ...updates };
+        setConfig(newConfig);
+    };
+
     const handleSave = () => {
         onConfigChange(node.id, config);
     };
@@ -55,7 +60,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
     const renderConfigFields = () => {
         switch (node.type) {
             case NODE_TYPES.SCHEDULE:
-                return <ScheduleConfig config={config} updateConfig={updateConfig} />;
+                return <ScheduleConfig config={config} updateConfig={updateConfig} updateConfigBatch={updateConfigBatch} />;
             case NODE_TYPES.EMAIL:
                 return <EmailConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.WHATSAPP:
@@ -145,14 +150,15 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
 interface ConfigProps {
     config: Record<string, any>;
     updateConfig: (key: string, value: any) => void;
+    updateConfigBatch?: (updates: Record<string, any>) => void;
 }
 
 // Schedule Trigger Configuration
-const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig, updateConfigBatch }) => {
     return (
         <div className="config-section">
             <h4>Schedule Settings</h4>
-            
+
             <div className="form-group">
                 <label>Trigger Mode</label>
                 <select
@@ -165,28 +171,83 @@ const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                 </select>
             </div>
 
-            {config.mode === 'interval' && (
+            {(config.mode === 'interval' || !config.mode) && (
                 <>
                     <div className="form-group">
-                        <label>Every</label>
-                        <div className="inline-inputs">
-                            <input
-                                type="number"
-                                value={config.intervalValue || 5}
-                                onChange={(e) => updateConfig('intervalValue', parseInt(e.target.value))}
-                                min="1"
-                            />
-                            <select
-                                value={config.intervalUnit || 'minutes'}
-                                onChange={(e) => updateConfig('intervalUnit', e.target.value)}
-                            >
-                                <option value="seconds">Seconds</option>
-                                <option value="minutes">Minutes</option>
-                                <option value="hours">Hours</option>
-                                <option value="days">Days</option>
-                            </select>
-                        </div>
+                        <label>Quick Select</label>
+                        <select
+                            value={config.quickInterval || 'custom'}
+                            onChange={(e) => {
+                                const val = e.target.value;
+
+                                // Batch all config updates together
+                                let updates: Record<string, any> = { quickInterval: val };
+
+                                if (val === '5min') {
+                                    updates.intervalValue = 5;
+                                    updates.intervalUnit = 'minutes';
+                                } else if (val === '15min') {
+                                    updates.intervalValue = 15;
+                                    updates.intervalUnit = 'minutes';
+                                } else if (val === '30min') {
+                                    updates.intervalValue = 30;
+                                    updates.intervalUnit = 'minutes';
+                                } else if (val === '1hour') {
+                                    updates.intervalValue = 1;
+                                    updates.intervalUnit = 'hours';
+                                } else if (val === '6hours') {
+                                    updates.intervalValue = 6;
+                                    updates.intervalUnit = 'hours';
+                                } else if (val === '12hours') {
+                                    updates.intervalValue = 12;
+                                    updates.intervalUnit = 'hours';
+                                } else if (val === '24hours') {
+                                    updates.intervalValue = 24;
+                                    updates.intervalUnit = 'hours';
+                                }
+
+                                // Apply all updates at once using batch function
+                                if (updateConfigBatch) {
+                                    updateConfigBatch(updates);
+                                } else {
+                                    // Fallback to individual updates if batch not available
+                                    Object.keys(updates).forEach(key => updateConfig(key, updates[key]));
+                                }
+                            }}
+                        >
+                            <option value="custom">Custom...</option>
+                            <option value="5min">Every 5 minutes</option>
+                            <option value="15min">Every 15 minutes</option>
+                            <option value="30min">Every 30 minutes</option>
+                            <option value="1hour">Every 1 hour</option>
+                            <option value="6hours">Every 6 hours</option>
+                            <option value="12hours">Every 12 hours</option>
+                            <option value="24hours">Every 24 hours (Daily)</option>
+                        </select>
                     </div>
+
+                    {(!config.quickInterval || config.quickInterval === 'custom') && (
+                        <div className="form-group">
+                            <label>Custom Interval</label>
+                            <div className="inline-inputs">
+                                <input
+                                    type="number"
+                                    value={config.intervalValue || 5}
+                                    onChange={(e) => updateConfig('intervalValue', parseInt(e.target.value))}
+                                    min="1"
+                                />
+                                <select
+                                    value={config.intervalUnit || 'minutes'}
+                                    onChange={(e) => updateConfig('intervalUnit', e.target.value)}
+                                >
+                                    <option value="seconds">Seconds</option>
+                                    <option value="minutes">Minutes</option>
+                                    <option value="hours">Hours</option>
+                                    <option value="days">Days</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
 

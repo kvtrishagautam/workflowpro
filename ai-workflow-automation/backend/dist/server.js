@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const webhookRoutes_1 = __importDefault(require("./routes/webhookRoutes"));
+const proxyRoutes_1 = __importDefault(require("./routes/proxyRoutes"));
 const app = (0, express_1.default)();
 const PORT = 4000;
 // Middleware
@@ -21,6 +22,7 @@ app.use((req, res, next) => {
 });
 // Routes
 app.use(webhookRoutes_1.default);
+app.use(proxyRoutes_1.default);
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({

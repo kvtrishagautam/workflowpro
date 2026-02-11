@@ -17,6 +17,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStart, setConnectionStart] = useState<string | null>(null);
+    const [connectionStartHandle, setConnectionStartHandle] = useState<string | undefined>(undefined);
     const [connectionEnd, setConnectionEnd] = useState<{ x: number; y: number } | null>(null);
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -113,13 +114,14 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     };
 
     // Connector click to start connection
-    const handleConnectorMouseDown = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output') => {
+    const handleConnectorMouseDown = (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', sourceHandle?: string) => {
         e.stopPropagation();
 
         // Only allow connections from output connectors
         if (connectorType === 'output') {
             setIsConnecting(true);
             setConnectionStart(nodeId);
+            setConnectionStartHandle(sourceHandle);
 
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -128,8 +130,19 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
             if (!node) return;
 
             const nodeDims = getNodeDimensions(nodeId);
-            const x = node.position.x + nodeDims.width / 2;
-            const y = node.position.y + nodeDims.height;
+
+            // Position based on connector type for conditional nodes
+            let x, y;
+            if (node.type === 'conditional' && sourceHandle === 'true') {
+                // TRUE connector on right side
+                x = node.position.x + nodeDims.width;
+                y = node.position.y + nodeDims.height / 2;
+            } else {
+                // Standard or FALSE connector at bottom
+                x = node.position.x + nodeDims.width / 2;
+                y = node.position.y + nodeDims.height;
+            }
+
             setConnectionEnd({ x, y });
         }
     };
@@ -149,6 +162,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     id: `edge_${Date.now()}`,
                     source: connectionStart,
                     target: nodeId,
+                    sourceHandle: connectionStartHandle,
                 };
 
                 const updated = {
@@ -162,6 +176,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
         setIsConnecting(false);
         setConnectionStart(null);
+        setConnectionStartHandle(undefined);
         setConnectionEnd(null);
     };
 
@@ -266,6 +281,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
         setDraggedNode(null);
         setIsConnecting(false);
         setConnectionStart(null);
+        setConnectionStartHandle(undefined);
         setConnectionEnd(null);
         setIsPanning(false);
         setPanStart(null);
@@ -442,9 +458,18 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         const targetDims = getNodeDimensions(targetNode.id);
 
                         // Calculate connection points
-                        // Output connector is at the bottom center of the source node
-                        const x1 = sourceNode.position.x + sourceDims.width / 2;
-                        const y1 = sourceNode.position.y + sourceDims.height;
+                        // Handle conditional nodes with TRUE (right) and FALSE (bottom) outputs
+                        let x1, y1;
+                        if (sourceNode.type === 'conditional' && edge.sourceHandle === 'true') {
+                            // TRUE connector is on the right side
+                            x1 = sourceNode.position.x + sourceDims.width;
+                            y1 = sourceNode.position.y + sourceDims.height / 2;
+                        } else {
+                            // Standard output connector at bottom center (also handles FALSE for conditional)
+                            x1 = sourceNode.position.x + sourceDims.width / 2;
+                            y1 = sourceNode.position.y + sourceDims.height;
+                        }
+
                         // Input connector is at the top center of the target node
                         const x2 = targetNode.position.x + targetDims.width / 2;
                         const y2 = targetNode.position.y;
@@ -497,8 +522,22 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         if (!sourceNode) return null;
 
                         const sourceDims = getNodeDimensions(sourceNode.id);
-                        const x1 = sourceNode.position.x + sourceDims.width / 2;
-                        const y1 = sourceNode.position.y + sourceDims.height;
+                        // Check if connecting from conditional TRUE connector (right side)
+                        // We'll determine this based on mouse position relative to node
+                        const isRightSide = connectionEnd.x > sourceNode.position.x + sourceDims.width / 2;
+                        const isConditional = sourceNode.type === 'conditional';
+
+                        let x1, y1;
+                        if (isConditional && isRightSide) {
+                            // TRUE connector on right side
+                            x1 = sourceNode.position.x + sourceDims.width;
+                            y1 = sourceNode.position.y + sourceDims.height / 2;
+                        } else {
+                            // Standard or FALSE connector at bottom
+                            x1 = sourceNode.position.x + sourceDims.width / 2;
+                            y1 = sourceNode.position.y + sourceDims.height;
+                        }
+
                         const x2 = connectionEnd.x;
                         const y2 = connectionEnd.y;
 

@@ -426,6 +426,54 @@
     box-shadow: 0 0 16px rgba(245, 158, 11, 0.8), 0 0 32px rgba(245, 158, 11, 0.4);
 }
 
+/* TRUE/FALSE connectors for conditional nodes */
+.true-connector {
+    right: -8px;
+    top: 50%;
+    left: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: #10b981;
+    border-color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.true-connector:hover {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    border-color: #059669;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.8), 0 0 32px rgba(16, 185, 129, 0.4);
+}
+
+.false-connector {
+    left: 50%;
+    bottom: -8px;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+    background: #ef4444;
+    border-color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.false-connector:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+    border-color: #dc2626;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.8), 0 0 32px rgba(239, 68, 68, 0.4);
+}
+
+.connector-label {
+    font-size: 9px;
+    font-weight: bold;
+    color: white;
+    position: absolute;
+    user-select: none;
+    pointer-events: none;
+}
+
 /* Context Menu */
 .node-menu {
     position: absolute;
