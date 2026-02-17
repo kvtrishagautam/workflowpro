@@ -59,7 +59,7 @@ export class GoogleSheetsExecutor {
             const processValue = (val: string) => {
                 if (typeof val !== 'string') return val;
                 return val.replace(/\${([^}]+)}/g, (_, path) => {
-                    const cleanPath = path.replace('data.', '');
+                    const cleanPath = path.replace('data.', '').trim();
                     const value = get(previousNodeOutput, cleanPath);
                     return value !== undefined ? value : '';
                 });

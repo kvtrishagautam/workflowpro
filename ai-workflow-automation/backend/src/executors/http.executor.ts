@@ -32,9 +32,15 @@ export class HTTPExecutor {
                 throw new Error('URL is required');
             }
 
-            if (!method) {
-                throw new Error('HTTP method is required');
+            // Default to GET if method is missing
+            const methodToUse = method || 'GET';
+
+            console.log('🌐 HTTP Executor Config:', { url, method: methodToUse, authType });
+
+            if (!url) {
+                throw new Error('URL is required');
             }
+
 
             // Variable replacement helper
             const processTemplate = (template: string) => {
@@ -64,7 +70,7 @@ export class HTTPExecutor {
 
             // Build request config
             const config: AxiosRequestConfig = {
-                method: method.toUpperCase() as Method,
+                method: methodToUse.toUpperCase() as Method,
                 url: processedUrl,
                 headers: requestHeaders,
                 timeout: timeout || 30000
@@ -79,7 +85,7 @@ export class HTTPExecutor {
             }
 
             // Add body for POST/PUT/PATCH
-            if (['POST', 'PUT', 'PATCH'].includes(method.toUpperCase()) && body) {
+            if (['POST', 'PUT', 'PATCH'].includes(methodToUse.toUpperCase()) && body) {
                 // Try to parse body as JSON if it's a string
                 if (typeof body === 'string') {
                     const processedBody = processTemplate(body);

@@ -75,7 +75,9 @@ export async function executeWorkflow(
         const edges: WorkflowEdge[] = workflow.edges ? workflow.edges.map(e => ({
             id: (e as any).id || `${e.source}-${e.target}`,
             source: e.source,
-            target: e.target
+            target: e.target,
+            sourceHandle: (e as any).sourceHandle,
+            targetHandle: (e as any).targetHandle
         })) : [];
 
         // Sort nodes
@@ -96,6 +98,12 @@ export async function executeWorkflow(
                     success: true,
                     result: { success: true, data: null, skipped: true },
                     message: 'Skipped due to condition'
+                });
+                // Propagate skip to children (Recursive Skip)
+                const childEdges = edges.filter(e => e.source === node.id);
+                childEdges.forEach(e => {
+                    console.log(`⏭️ cascading skip to child node: ${e.target}`);
+                    skippedNodes.add(e.target);
                 });
                 continue;
             }
@@ -200,11 +208,13 @@ export async function executeWorkflow(
 
                 // Identify nodes to skip (connected to OTHER handles)
                 outgoingEdges.forEach(edge => {
+                    console.log(`🔍 Checking edge ${edge.id}: sourceHandle=${edge.sourceHandle} vs outputHandle=${outputHandle}`);
                     // If edge has a handle and it DOESN'T match the output handle, skip the target
-                    // Note: If edge has NO handle, it's a default path, so usually execute it (unless strict outputHandle logic is desired)
-                    // For Conditional Node: handles are 'true' and 'false'.
                     if (edge.sourceHandle && edge.sourceHandle !== outputHandle) {
+                        console.log(`🚫 Skipping target node ${edge.target} because handle mismatch`);
                         skippedNodes.add(edge.target);
+                    } else {
+                        console.log(`✅ Proceeding to target node ${edge.target}`);
                     }
                 });
             }

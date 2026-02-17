@@ -534,7 +534,7 @@ const DiscordConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                 />
             </div>
 
-            {config.operation === 'sendMessage' && (
+            {(config.operation === 'sendMessage' || !config.operation) && (
                 <div className="form-group">
                     <label>Message</label>
                     <textarea

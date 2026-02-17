@@ -28,7 +28,7 @@ export class DiscordExecutor {
                 // Replace ${data.field} or {{data.field}} syntax
                 return template.replace(/\${([^}]+)}|\{\{([^}]+)\}\}/g, (_, path1, path2) => {
                     const path = path1 || path2;
-                    const cleanPath = path.replace('data.', '');
+                    const cleanPath = path.replace('data.', '').trim();
                     const value = get(previousOutput, cleanPath);
                     return value !== undefined ? value : '';
                 });
