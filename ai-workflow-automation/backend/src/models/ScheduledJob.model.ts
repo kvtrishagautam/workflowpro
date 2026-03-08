@@ -12,6 +12,8 @@ export interface IScheduledJob extends Document {
     personalizationCSV?: string;
     executedAt?: Date;
     errorMessage?: string;
+    maxExecutions?: number; // Maximum number of times to execute (for recurring jobs)
+    executionCount: number; // Counter for number of times executed
     createdAt: Date;
     updatedAt: Date;
 }
@@ -37,7 +39,9 @@ const scheduledJobSchema = new Schema<IScheduledJob>(
         },
         personalizationCSV: { type: String },
         executedAt: { type: Date },
-        errorMessage: { type: String }
+        errorMessage: { type: String },
+        maxExecutions: { type: Number }, // Maximum executions for recurring jobs
+        executionCount: { type: Number, default: 0 } // Track number of executions
     },
     {
         timestamps: true

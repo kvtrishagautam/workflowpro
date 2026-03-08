@@ -1,68 +1,97 @@
-# Email Discovery Node - Real Email Scraping
+# Email Discovery Node
 
 ## Overview
-The Email Discovery Node has been upgraded to scrape **real, valid email addresses** from web pages instead of returning mock data.
+The Email Discovery Node scrapes **real, valid email addresses** from web pages using:
+- **Direct URL scraping** — provide your own URLs
+- **DuckDuckGo search** — free, no API key needed
+- **Industry-specific curated URLs** — fallback for 7 industries
+
+All scraping is done with **robots.txt compliance**, **rate limiting**, and **retry logic**.
 
 ## Features
 
-### 1. **Direct URL Scraping**
-Provide specific URLs to scrape for email addresses:
+### 1. Direct URL Scraping
 ```json
 {
   "urls": [
-    "https://www.example.com/contact",
+    "https://www.company.com/contact",
     "https://www.company.com/about"
   ]
 }
 ```
 
-### 2. **Keyword-Based Discovery**
-Search for emails using keywords and industry filters:
+### 2. DuckDuckGo Keyword Search (Free)
 ```json
 {
-  "keywords": ["technology", "startup"],
+  "keywords": ["fintech", "startup"],
   "industry": "technology",
   "maxEmails": 20
 }
 ```
 
-### 3. **Domain Filtering**
-Filter results to specific domains:
+### 3. Domain Filtering
 ```json
 {
-  "urls": ["https://www.example.com/contact"],
-  "targetDomains": ["example.com"]
+  "urls": ["https://www.company.com/contact"],
+  "targetDomains": ["company.com"]
+}
+```
+
+### 4. Combined Mode
+```json
+{
+  "urls": ["https://custom-site.com/team"],
+  "keywords": ["SaaS", "cloud"],
+  "industry": "technology",
+  "targetDomains": ["company.com"],
+  "maxEmails": 30
 }
 ```
 
 ## How It Works
 
 ### Email Extraction
-- Uses regex pattern to find email addresses in HTML content
-- Validates email format (must have exactly one @ symbol)
-- Filters out common invalid patterns:
-  - Example domains (example.com, test.com, sample.com)
-  - No-reply addresses (noreply@, no-reply@, donotreply@)
-  - Error tracking services (sentry.io)
-  - W3C examples (w3.org)
-  - Localhost addresses
+- Regex pattern finds emails in raw HTML
+- **Validates** every email against:
+  - Domain legitimacy (valid TLDs only)
+  - False-positive patterns (`photo@2x.png`, `style@1.0`, etc.)
+  - Minimum local-part length (3+ chars with at least one letter)
+  - Invalid domains (example.com, test.com, localhost, etc.)
 
-### Confidence Scoring
-All scraped emails receive a confidence score of **0.85** (85% confidence)
+### Confidence Scoring (Dynamic)
+Unlike the old hardcoded `0.85`, scores are now **calculated dynamically**:
 
-### Deduplication
-- Automatically removes duplicate email addresses
-- Case-insensitive matching (converts all to lowercase)
+| Signal | Effect |
+|--------|--------|
+| Near "contact", "email", "mailto:" text | +0.15 |
+| Found via `mailto:` link | +0.15 |
+| Source URL is a contact/about page | +0.10 |
+| Professional format (`first.last@`) | +0.10 |
+| Free email provider (gmail, yahoo) | -0.05 |
+| Generic local part (info@, admin@) | -0.05 |
+
+Base score: `0.50`, range: `0.10 – 1.00`
+
+### robots.txt Compliance
+- Checks `robots.txt` before scraping any URL
+- Skips disallowed paths, logs warnings
+- Caches results for 5 minutes per host
+
+### Rate Limiting & Retries
+- **1.5 second delay** between requests
+- **2 retries** with exponential backoff (1s, 2s)
+- **15 second timeout** per URL
+- **HTTP redirects** followed (301, 302, 303, 307, 308, up to 5 hops)
 
 ## Input Schema
 
 ```typescript
 {
-  urls?: string[];              // Direct URLs to scrape
-  keywords?: string[];          // Keywords for searching
-  targetDomains?: string[];     // Filter by specific domains
-  industry?: string;            // Industry filter: 'education', 'business', 'technology', 'startup', 'ngo', 'corporate'
-  maxEmails?: number;           // Maximum emails to return (default: 50)
+  urls?: string[];           // Direct URLs to scrape
+  keywords?: string[];       // DuckDuckGo search keywords
+  targetDomains?: string[];  // Filter emails to specific domains
+  industry?: string;         // 'education' | 'business' | 'technology' | 'startup' | 'ngo' | 'corporate' | 'opensource'
+  maxEmails?: number;        // Max emails to return (default: 50)
 }
 ```
 
@@ -71,175 +100,79 @@ All scraped emails receive a confidence score of **0.85** (85% confidence)
 ```typescript
 {
   emails: Array<{
-    email: string;              // The email address
-    source_url: string;         // URL where it was found
-    matched_keyword?: string;   // Keyword that matched (or 'direct_url')
-    confidence_score: number;   // Confidence score (0.85)
+    email: string;
+    source_url: string;
+    matched_keyword?: string;
+    confidence_score: number; // 0.10 – 1.00
   }>;
-  totalScraped: number;         // Total emails found before filtering
-  uniqueCount: number;          // Unique emails after deduplication
-  returnedCount: number;        // Final count after maxEmails limit
+  totalScraped: number;
+  uniqueCount: number;
+  returnedCount: number;
+  scrapeStats: {
+    successful: number;
+    failed: number;
+    blockedByRobots: number;
+    totalUrls: number;
+  };
+  warnings?: string[];       // Errors, skipped URLs, DB issues
 }
 ```
 
-## Example Usage
+## Supported Industries (Fallback URLs)
 
-### Example 1: Scrape Specific Contact Pages
-```json
-{
-  "urls": [
-    "https://www.ycombinator.com/contact",
-    "https://arstechnica.com/contact-us/",
-    "https://www.wired.com/about/contact/"
-  ],
-  "maxEmails": 10
-}
-```
-
-### Example 2: Find Technology Company Emails
-```json
-{
-  "keywords": ["technology", "startup"],
-  "industry": "technology",
-  "maxEmails": 20
-}
-```
-
-### Example 3: Scrape with Domain Filter
-```json
-{
-  "urls": [
-    "https://www.company.com/contact",
-    "https://www.company.com/about"
-  ],
-  "targetDomains": ["company.com"],
-  "maxEmails": 5
-}
-```
-
-## Built-in Industry URLs
-
-When using keywords and industry filters, the node automatically searches these curated URLs:
-
-### Technology
-- TechCrunch contact page
-- Wired contact page
-- Ars Technica contact page
-
-### Education
-- Edutopia contact page
-- Chronicle of Higher Education contact page
-
-### Business
-- Forbes contact page
-- Inc. contact page
-
-### Startup
-- Y Combinator contact page
-- TechCrunch contact page
-
-## Testing
-
-Run the test script to verify email scraping:
-```bash
-npm run build
-node dist/scripts/test-real-scraping.js
-```
-
-Check the results in: `dist/scripts/real-email-test.txt`
+| Industry | Curated Sources |
+|----------|----------------|
+| technology | GitLab, Mozilla, Apache |
+| education | Khan Academy, edX |
+| business | Shopify, Salesforce |
+| startup | Product Hunt, Y Combinator |
+| ngo | Red Cross, UNICEF, Amnesty |
+| corporate | IBM, Microsoft, Oracle |
+| opensource | Apache, Linux Foundation |
 
 ## Integration with Email Sending Node
 
-The Email Discovery Node output is designed to work seamlessly with the Email Sending Node:
-
-```javascript
-// Workflow example
+```json
 {
-  nodes: [
+  "nodes": [
     {
-      id: '1',
-      type: 'EMAIL_DISCOVERY',
-      input: {
-        keywords: ['technology'],
-        industry: 'technology',
-        maxEmails: 10
+      "id": "1",
+      "type": "EMAIL_DISCOVERY",
+      "input": {
+        "keywords": ["technology"],
+        "industry": "technology",
+        "maxEmails": 10
       }
     },
     {
-      id: '2',
-      type: 'EMAIL_SENDING',
-      input: {
-        subject: 'Hello from Workflow Pro',
-        body: '<h1>Hi!</h1><p>This is an automated email.</p>'
+      "id": "2",
+      "type": "EMAIL_SENDING",
+      "input": {
+        "subject": "Hello from Workflow Pro",
+        "body": "<h1>Hi!</h1><p>This is an automated email.</p>"
       }
     }
   ],
-  edges: [
-    { source: '1', target: '2', id: 'e1-2' }
+  "edges": [
+    { "source": "1", "target": "2", "id": "e1-2" }
   ]
 }
 ```
 
-The `emails` array from the discovery node is automatically passed to the sending node.
+## Security & Ethics
 
-## Limitations & Future Enhancements
-
-### Current Limitations
-1. Only scrapes emails visible in HTML (not JavaScript-rendered content)
-2. Limited to HTTP/HTTPS protocols
-3. 10-second timeout per URL
-4. No authentication support for protected pages
-
-### Planned Enhancements
-1. **JavaScript Rendering**: Use headless browser for dynamic content
-2. **Search API Integration**: Integrate with Google Custom Search API
-3. **Email Verification**: Verify email deliverability using SMTP
-4. **Rate Limiting**: Add configurable delays between requests
-5. **Proxy Support**: Rotate IP addresses to avoid blocking
-6. **Advanced Filtering**: Filter by email patterns (e.g., only @company.com emails)
+- ✅ Respects `robots.txt` automatically
+- ✅ Rate-limited (1.5s between requests)
+- ✅ Only scrapes publicly available HTML
+- ✅ Filters out noreply/donotreply/postmaster addresses
+- ⚠️ Always comply with GDPR, CAN-SPAM regulations
+- ⚠️ Provide unsubscribe mechanisms when emailing
 
 ## Troubleshooting
 
-### No Emails Found
-- **Check URL accessibility**: Ensure URLs are publicly accessible
-- **Verify HTML content**: Some sites use JavaScript to render emails
-- **Check filters**: Domain filters might be too restrictive
-
-### Invalid Emails
-- The node automatically filters common invalid patterns
-- If you're still getting invalid emails, check the `INVALID_PATTERNS` array in the source code
-
-### Timeout Errors
-- Default timeout is 10 seconds per URL
-- Some sites may be slow or blocking automated requests
-- Consider using fewer URLs or implementing retry logic
-
-## Security & Ethics
-
-### Best Practices
-1. **Respect robots.txt**: Check site's robots.txt before scraping
-2. **Rate Limiting**: Don't overwhelm servers with requests
-3. **Privacy**: Only use emails for legitimate business purposes
-4. **Compliance**: Follow GDPR, CAN-SPAM, and other regulations
-5. **Opt-out**: Provide clear unsubscribe mechanisms
-
-### Legal Considerations
-- Scraping publicly available emails is generally legal
-- Using scraped emails for spam is illegal in most jurisdictions
-- Always comply with local data protection laws
-- Consider using opt-in methods instead of scraping
-
-## API Reference
-
-### fetchURL(url: string): Promise<string>
-Fetches HTML content from a URL with a 10-second timeout.
-
-### extractEmails(html: string, sourceUrl: string): Array<EmailData>
-Extracts and validates email addresses from HTML content.
-
-### searchForPages(keywords: string[], industry?: string): Promise<string[]>
-Returns curated URLs based on keywords and industry.
-
-## Support
-
-For issues or feature requests, please check the project documentation or contact the development team.
+| Problem | Solution |
+|---------|----------|
+| No emails found | Check if the site renders emails via JavaScript (not supported) |
+| All URLs blocked | Check `robots.txt` for those domains |
+| Timeout errors | Site may be slow; retries happen automatically |
+| DB save warnings | Check MongoDB connection; emails are still returned even if DB fails |

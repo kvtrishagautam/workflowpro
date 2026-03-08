@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import Canvas from '../components/Canvas';
 import NodePalette from '../components/NodePalette';
 import RunHistory from '../components/RunHistory';
@@ -8,9 +9,11 @@ import { Workflow, NodeProps, NODE_TYPES } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
 import { executeWorkflow } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
+import { LayoutDashboard } from 'lucide-react';
 import './Editor.css';
 
 const Editor: React.FC = () => {
+    const history = useHistory();
     const [workflow, setWorkflow] = useState<Workflow>({
         id: `workflow_${Date.now()}`,
         name: 'New Workflow',
@@ -188,7 +191,11 @@ const Editor: React.FC = () => {
                     operation: 'read',
                     spreadsheetId: '',
                     sheetName: '',
-                    range: '',
+                    range: 'A:Z', // Default to all columns
+                    outputSpreadsheetId: '', // For writeToNewSheet
+                    outputTabName: '', // For appendToNewTab
+                    includeHeaders: true,
+                    formatForVisualization: true,
                 };
                 break;
             case NODE_TYPES.AIRTABLE:
@@ -226,6 +233,11 @@ const Editor: React.FC = () => {
             case NODE_TYPES.JAVASCRIPT:
                 config = {
                     code: '// Access input data with $input\nreturn $input;',
+                };
+                break;
+            case NODE_TYPES.DASHBOARD_PORTAL:
+                config = {
+                    defaultCategory: 'Tasks'
                 };
                 break;
             default:
@@ -267,7 +279,7 @@ const Editor: React.FC = () => {
             if (response.webhooks && response.webhooks.length > 0) {
                 console.log('📍 Registered webhooks:');
                 response.webhooks.forEach((webhook) => {
-                    console.log(`   ${webhook.method} http://localhost:4000${webhook.path}`);
+                    console.log(`   ${webhook.method} http://localhost:5000${webhook.path}`);
                 });
             }
 
@@ -455,6 +467,8 @@ const Editor: React.FC = () => {
                 </div>
 
                 <div className="editor-header-actions">
+
+
                     <div className="workflow-stats">
                         <span title={`Nodes: ${workflow.nodes.length}`}>🔧 {workflow.nodes.length}</span>
                         <span title={`Connections: ${workflow.edges.length}`}>🔗 {workflow.edges.length}</span>

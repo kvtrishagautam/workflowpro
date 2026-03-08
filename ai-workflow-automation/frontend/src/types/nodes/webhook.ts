@@ -92,7 +92,7 @@ export const DEFAULT_WEBHOOK_CONFIG: WebhookConfig = {
 };
 
 // Helper function to generate webhook URLs
-export function getWebhookUrls(path: string, baseUrl: string = 'http://localhost:4000'): {
+export function getWebhookUrls(path: string, baseUrl: string = 'http://localhost:5000'): {
   testUrl: string;
   productionUrl: string;
 } {

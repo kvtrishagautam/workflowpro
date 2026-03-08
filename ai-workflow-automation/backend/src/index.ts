@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
+import path from 'path';
 import { nodeRegistry } from './services/nodeRegistry';
 import { emailDiscoveryNode } from './nodes/emailDiscovery';
 import { emailSendingNode } from './nodes/emailSending';
 import { scheduledEmailNode } from './nodes/scheduledEmail.node';
+import googleSheetsNode from './nodes/googleSheets.node';
 import {
     webhookNode,
     javascriptNode,
@@ -13,11 +15,16 @@ import {
     conditionalNode,
     delayNode
 } from './nodes/foundationNodes';
+import { csvReadNode } from './nodes/csvRead.node';
+import { dataCleanerNode } from './nodes/dataCleaner.node';
+import { analysisEngineNode } from './nodes/analysisEngine.node';
+import { mongoDbStorageNode } from './nodes/mongoDbStorage.node';
 import { connectToMongoDB } from './config/mongoClient';
 import { jobScheduler } from './services/jobScheduler.service';
 import { recipientGroupService } from './services/recipientGroup.service';
 import { deliveryLogger } from './services/deliveryLogger.service';
 import { DiscoveredEmail } from './models/DiscoveredEmail.model';
+import { AnalysisResult } from './models/AnalysisResult.model';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +36,9 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve standalone dashboard HTML from project root
+app.use(express.static(path.join(__dirname, '../../')));
 
 // Initialize MongoDB and job scheduler
 (async () => {
@@ -42,16 +52,24 @@ app.use(express.json());
 })();
 
 // Register all nodes
+import { dashboardPortalNode } from './nodes/dashboardPortal.node';
+
 console.log('Registering nodes...');
 nodeRegistry.register(emailDiscoveryNode);
 nodeRegistry.register(emailSendingNode);
 nodeRegistry.register(scheduledEmailNode);
+nodeRegistry.register(googleSheetsNode);
 nodeRegistry.register(webhookNode);
 nodeRegistry.register(javascriptNode);
 nodeRegistry.register(slackNode);
 nodeRegistry.register(httpNode);
 nodeRegistry.register(conditionalNode);
 nodeRegistry.register(delayNode);
+nodeRegistry.register(csvReadNode);
+nodeRegistry.register(dataCleanerNode);
+nodeRegistry.register(analysisEngineNode);
+nodeRegistry.register(mongoDbStorageNode);
+nodeRegistry.register(dashboardPortalNode);
 console.log('All nodes registered successfully!');
 
 // API endpoint to list all available nodes
@@ -65,6 +83,69 @@ app.get('/api/nodes', (req, res) => {
         outputSchema: node.outputSchema
     }));
     res.json({ nodes });
+});
+
+// API endpoint to list sample workflow templates
+app.get('/api/sample-workflows', (req, res) => {
+    try {
+        const fs = require('fs');
+        const samplesDir = path.join(__dirname, '../../sample-workflows');
+        if (!fs.existsSync(samplesDir)) {
+            return res.json({ workflows: [] });
+        }
+        const files = fs.readdirSync(samplesDir).filter((f: string) => f.endsWith('.json'));
+        const workflows = files.map((f: string) => {
+            const content = JSON.parse(fs.readFileSync(path.join(samplesDir, f), 'utf8'));
+            return { id: content.id, name: content.name, description: content.description, file: f };
+        });
+        res.json({ workflows });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// API endpoint to load a specific sample workflow
+app.get('/api/sample-workflows/:filename', (req, res) => {
+    try {
+        const fs = require('fs');
+        const filePath = path.join(__dirname, '../../sample-workflows', req.params.filename);
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Sample workflow not found' });
+        }
+        const workflow = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        res.json(workflow);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// API endpoint to save a workflow
+app.post('/api/workflows', async (req, res) => {
+    try {
+        const { name, description, nodes, edges } = req.body;
+
+        if (!nodes || !Array.isArray(nodes)) {
+            return res.status(400).json({ error: 'Invalid workflow: nodes array required' });
+        }
+
+        // For now, just return success - can add MongoDB model later
+        const workflow = {
+            id: Date.now().toString(),
+            name: name || 'Untitled Workflow',
+            description: description || '',
+            nodes,
+            edges: edges || [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        res.json({
+            message: 'Workflow saved successfully',
+            workflow
+        });
+    } catch (error: any) {
+        console.error('Workflow save error:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // API endpoint to execute a workflow
@@ -152,7 +233,16 @@ app.post('/api/workflows/execute', async (req, res) => {
             previousOutput = result.data || {};
         }
 
-        res.json({ status: 'success', results });
+        // Strip large fields from response to prevent JSON serialization crash
+        const leanResults = results.map(r => {
+            if (r.result?.data) {
+                const { rawRows, allResults, ...leanData } = r.result.data;
+                return { ...r, result: { ...r.result, data: leanData } };
+            }
+            return r;
+        });
+
+        res.json({ status: 'success', results: leanResults });
     } catch (error: any) {
         console.error('Workflow execution error:', error);
         res.status(500).json({ error: error.message });
@@ -185,13 +275,36 @@ app.get('/api/scheduled-jobs/:jobId', async (req, res) => {
     }
 });
 
+// Send Now endpoint - trigger immediate send for a scheduled job
+app.post('/api/scheduled-jobs/:jobId/send-now', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const result = await jobScheduler.sendNow(jobId);
+
+        if (result.success) {
+            res.json({
+                message: result.message,
+                successCount: result.successCount,
+                failureCount: result.failureCount
+            });
+        } else {
+            res.status(400).json({ error: result.message });
+        }
+    } catch (error: any) {
+        console.error('Error in send-now endpoint:', error);
+        res.status(500).json({ error: error.message || 'Failed to send email' });
+    }
+});
+
+// Stop/Cancel job endpoint - cancel a running scheduled job
 app.post('/api/scheduled-jobs/:jobId/cancel', async (req, res) => {
     try {
         const { jobId } = req.params;
         await jobScheduler.cancelJob(jobId);
         res.json({ message: 'Job cancelled successfully' });
     } catch (error: any) {
-        res.status(500).json({ error: error.message });
+        console.error('Error cancelling job:', error);
+        res.status(500).json({ error: error.message || 'Failed to cancel job' });
     }
 });
 
@@ -330,6 +443,56 @@ app.get('/api/discovered-emails/stats/summary', async (req, res) => {
     }
 });
 
+// --- NEW API ROUTES FOR ANALYSIS DASHBOARD ---
+
+app.get('/api/analysis/results', async (req, res) => {
+    try {
+        const { category } = req.query;
+        const query: any = {};
+        if (category) query.category = category;
+
+        // Fetch the 50 most recent
+        const results = await AnalysisResult.find(query)
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        res.json({ results });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Returns all distinct categories with their most recent timestamp
+app.get('/api/analysis/categories', async (req, res) => {
+    try {
+        const cats = await AnalysisResult.aggregate([
+            { $group: { _id: '$category', lastRun: { $max: '$createdAt' }, count: { $sum: 1 } } },
+            { $sort: { lastRun: -1 } },
+            { $project: { category: '$_id', lastRun: 1, count: 1, _id: 0 } }
+        ]);
+        res.json({ categories: cats });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/analysis/results/latest', async (req, res) => {
+    try {
+        const { category } = req.query;
+        const query: any = {};
+        if (category) query.category = category;
+
+        const result = await AnalysisResult.findOne(query)
+            .sort({ createdAt: -1 });
+
+        res.json({ result });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// ----------------------------------------------
+
+
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Email Automation Backend is running' });
@@ -343,4 +506,13 @@ app.listen(PORT, () => {
     console.log(`  GET  /health - Health check`);
     console.log(`  GET  /api/nodes - List all nodes`);
     console.log(`  POST /api/workflows/execute - Execute workflow\n`);
+});
+
+// Prevent crashes from unhandled errors
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('⚠️ Uncaught Exception:', error);
 });

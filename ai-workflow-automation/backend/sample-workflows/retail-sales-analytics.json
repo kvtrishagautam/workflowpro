@@ -1,0 +1,109 @@
+{
+    "id": "retail-sales-analytics",
+    "name": "Retail Sales Analytics Pipeline",
+    "description": "End-to-end workflow for quarterly retail sales analysis. Ingests POS transaction data, cleans/normalizes it, runs sales analysis (revenue by product category, monthly trends), stores results in MongoDB, and links to the live dashboard.",
+    "nodes": [
+        {
+            "id": "csv_read_1",
+            "type": "csvRead",
+            "data": {
+                "label": "Import Sales Data",
+                "config": {
+                    "csvData": "Transaction ID,Date,Product,Category,Quantity,Price,Total Sales,Region,Salesperson\nTXN001,2026-01-05,Laptop Pro 15,Electronics,3,1200,3600,North,Alice Johnson\nTXN002,2026-01-08,Office Chair Ergonomic,Furniture,12,350,4200,South,Bob Smith\nTXN003,2026-01-12,Wireless Mouse,Electronics,50,25,1250,East,Carol White\nTXN004,2026-01-15,Standing Desk,Furniture,5,600,3000,West,David Lee\nTXN005,2026-01-20,USB-C Hub,Electronics,30,45,1350,North,Alice Johnson\nTXN006,2026-02-03,Mechanical Keyboard,Electronics,20,120,2400,South,Eve Martinez\nTXN007,2026-02-10,Filing Cabinet,Furniture,8,180,1440,East,Carol White\nTXN008,2026-02-14,Monitor 27 inch,Electronics,6,400,2400,North,Bob Smith\nTXN009,2026-02-22,Desk Lamp LED,Accessories,40,35,1400,West,David Lee\nTXN010,2026-03-01,Laptop Pro 15,Electronics,4,1200,4800,South,Alice Johnson\nTXN011,2026-03-08,Office Chair Ergonomic,Furniture,10,350,3500,North,Eve Martinez\nTXN012,2026-03-12,Webcam HD,Electronics,25,60,1500,East,Carol White\nTXN013,2026-03-18,Whiteboard 6ft,Accessories,15,90,1350,West,Bob Smith\nTXN014,2026-03-25,Laptop Bag,Accessories,35,55,1925,South,David Lee\nTXN015,2026-03-30,Standing Desk,Furniture,7,600,4200,North,Alice Johnson",
+                    "delimiter": ",",
+                    "skipEmptyLines": true
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "data_cleaner_1",
+            "type": "dataCleaner",
+            "data": {
+                "label": "Clean & Normalize Sales",
+                "config": {
+                    "removeEmptyRows": true,
+                    "trimStrings": true,
+                    "convertToNumbers": true,
+                    "fillMissingValues": "N/A"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 280
+            }
+        },
+        {
+            "id": "analysis_engine_1",
+            "type": "analysisEngine",
+            "data": {
+                "label": "Sales Revenue Analysis",
+                "config": {
+                    "categories": [
+                        "Sales"
+                    ],
+                    "datasetId": "retail_sales_Q1_2026"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 460
+            }
+        },
+        {
+            "id": "mongo_storage_1",
+            "type": "mongoDbStorage",
+            "data": {
+                "label": "Save to MongoDB",
+                "config": {
+                    "collectionName": "AnalysisResult"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 640
+            }
+        },
+        {
+            "id": "dashboard_portal_1",
+            "type": "dashboardPortal",
+            "data": {
+                "label": "Sales Dashboard",
+                "config": {
+                    "defaultCategory": "Sales"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 820
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "csv_read_1",
+            "target": "data_cleaner_1"
+        },
+        {
+            "id": "e2",
+            "source": "data_cleaner_1",
+            "target": "analysis_engine_1"
+        },
+        {
+            "id": "e3",
+            "source": "analysis_engine_1",
+            "target": "mongo_storage_1"
+        },
+        {
+            "id": "e4",
+            "source": "mongo_storage_1",
+            "target": "dashboard_portal_1"
+        }
+    ],
+    "createdAt": "2026-03-08T11:00:00.000Z",
+    "updatedAt": "2026-03-08T11:00:00.000Z"
+}

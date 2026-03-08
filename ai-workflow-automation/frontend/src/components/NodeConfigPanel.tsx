@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NodeProps, NODE_TYPES } from '../types';
 import './NodeConfigPanel.css';
+import { DashboardPortalConfig } from './DashboardPortalConfig';
 
 interface NodeConfigPanelProps {
     node: NodeProps;
@@ -57,8 +58,18 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
 
     const renderConfigFields = () => {
         switch (node.type) {
+            case NODE_TYPES.DASHBOARD_PORTAL:
+                return <DashboardPortalConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.SCHEDULE:
                 return <ScheduleConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.CSV_READ:
+                return <CSVReadConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.DATA_CLEANER:
+                return <DataCleanerConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.ANALYSIS_ENGINE:
+                return <AnalysisEngineConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.MDB_STORAGE:
+                return <MongoDbStorageConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.EMAIL:
                 return <EmailConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.EMAIL_DISCOVERY:
@@ -155,6 +166,203 @@ interface ConfigProps {
     config: Record<string, any>;
     updateConfig: (key: string, value: any) => void;
 }
+
+// ----- NEW NODE CONFIG COMPONENTS -----
+
+const CSVReadConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => (
+    <div className="config-section">
+        <label>Delimiters (comma separated)</label>
+        <input
+            type="text"
+            value={config.delimiters || ','}
+            onChange={(e) => updateConfig('delimiters', e.target.value)}
+            placeholder="e.g. , ; |"
+            className="config-input"
+        />
+
+        <div className="checkbox-wrap mt-3">
+            <input
+                type="checkbox"
+                id="skipEmpty"
+                checked={config.skipEmptyLines !== false}
+                onChange={(e) => updateConfig('skipEmptyLines', e.target.checked)}
+            />
+            <label htmlFor="skipEmpty">Skip Empty Lines</label>
+        </div>
+
+        <label className="mt-3">CSV Raw Data String</label>
+        <textarea
+            value={config.csvData || ''}
+            onChange={(e) => updateConfig('csvData', e.target.value)}
+            placeholder="Paste raw CSV data here (for testing/demo)"
+            className="config-input nodrag nowheel"
+            rows={5}
+        />
+        <small className="help-text text-muted">Leave blank if data is piped from a previous node.</small>
+    </div>
+);
+
+const DataCleanerConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => (
+    <div className="config-section">
+        <h4>Cleaning Options</h4>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="removeEmpty"
+                checked={config.removeEmptyRows !== false}
+                onChange={(e) => updateConfig('removeEmptyRows', e.target.checked)} />
+            <label htmlFor="removeEmpty">Remove Empty Rows</label>
+        </div>
+        <small className="help-text">Strips rows where all fields are blank.</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="trimStrings"
+                checked={config.trimStrings !== false}
+                onChange={(e) => updateConfig('trimStrings', e.target.checked)} />
+            <label htmlFor="trimStrings">Trim Whitespace</label>
+        </div>
+        <small className="help-text">Removes leading/trailing spaces from all text values.</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="convertNumbers"
+                checked={config.convertToNumbers !== false}
+                onChange={(e) => updateConfig('convertToNumbers', e.target.checked)} />
+            <label htmlFor="convertNumbers">Convert Numbers</label>
+        </div>
+        <small className="help-text">Converts numeric strings like "42000" to real numbers.</small>
+
+        <div className="checkbox-wrap mt-2" style={{ marginTop: 14 }}>
+            <input type="checkbox" id="normalizeCase"
+                checked={config.normalizeCase !== false}
+                onChange={(e) => updateConfig('normalizeCase', e.target.checked)} />
+            <label htmlFor="normalizeCase">🔤 Normalize Text Casing</label>
+        </div>
+        <small className="help-text">Title-cases category, department, employee, merchant etc. — fixes "MARKETING" → "Marketing", "cloud infrastructure" → "Cloud Infrastructure".</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="normalizeDates"
+                checked={config.normalizeDates !== false}
+                onChange={(e) => updateConfig('normalizeDates', e.target.checked)} />
+            <label htmlFor="normalizeDates">📅 Normalize Date Formats</label>
+        </div>
+        <small className="help-text">Converts MM/DD/YYYY, DD-MM-YYYY, YYYY/MM/DD → standard YYYY-MM-DD for consistent analysis.</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="removeOutliers"
+                checked={config.removeOutliers !== false}
+                onChange={(e) => updateConfig('removeOutliers', e.target.checked)} />
+            <label htmlFor="removeOutliers">📊 Remove Outliers (Z-score)</label>
+        </div>
+        <small className="help-text">Removes rows where any numeric value is statistically extreme. Prevents one bad value from skewing all charts.</small>
+
+        {config.removeOutliers !== false && (
+            <div style={{ marginTop: 8 }}>
+                <label>Outlier Threshold (std deviations)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="range" min={1} max={5} step={0.5}
+                        value={config.outlierThreshold ?? 3}
+                        onChange={(e) => updateConfig('outlierThreshold', parseFloat(e.target.value))}
+                        style={{ flex: 1 }} />
+                    <span style={{ fontWeight: 700, color: '#667eea', minWidth: 24 }}>
+                        {config.outlierThreshold ?? 3}σ
+                    </span>
+                </div>
+                <small className="help-text">3σ = aggressive, 5σ = only extreme outliers. Default: 3.</small>
+            </div>
+        )}
+
+        <div style={{ marginTop: 14 }}>
+            <label>Fill Missing Values With (Optional)</label>
+            <input type="text" value={config.fillMissingValuesWith || ''}
+                onChange={(e) => updateConfig('fillMissingValuesWith', e.target.value)}
+                placeholder="e.g. N/A, 0, or leave blank"
+                className="config-input" />
+        </div>
+    </div>
+);
+
+const AnalysisEngineConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+    const categories = ['Sales', 'Tasks', 'Attendance', 'Expenses', 'Generic'];
+    const labels: Record<string, string> = {
+        Sales: '💰 Sales & Revenue',
+        Tasks: '✅ Task Management',
+        Attendance: '🕐 Employee Attendance',
+        Expenses: '💸 Expenses',
+        Generic: '⚙️ Generic / Passthrough',
+    };
+
+    const selected: string[] = Array.isArray(config.categories)
+        ? config.categories
+        : config.category
+            ? [config.category]
+            : ['Tasks'];
+
+    const toggle = (cat: string) => {
+        const next = selected.includes(cat)
+            ? selected.filter((c) => c !== cat)
+            : [...selected, cat];
+        updateConfig('categories', next.length ? next : [cat]);
+    };
+
+    return (
+        <div className="config-section">
+            <label>Analysis Categories</label>
+            <small className="help-text text-muted" style={{ display: 'block', marginBottom: 8 }}>
+                Select one or more types of analytics to run.
+            </small>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                {categories.map((cat) => (
+                    <label
+                        key={cat}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                            padding: '9px 14px', borderRadius: 8,
+                            background: selected.includes(cat) ? 'linear-gradient(135deg,rgba(102,126,234,.12),rgba(118,75,162,.12))' : 'var(--node-bg,#f8f9fa)',
+                            border: `1.5px solid ${selected.includes(cat) ? '#667eea' : 'var(--border,#dee2e6)'}`,
+                            transition: 'all .18s',
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={selected.includes(cat)}
+                            onChange={() => toggle(cat)}
+                            style={{ width: 16, height: 16, accentColor: '#667eea' }}
+                        />
+                        <span style={{ fontSize: 13, fontWeight: selected.includes(cat) ? 600 : 400 }}>
+                            {labels[cat]}
+                        </span>
+                    </label>
+                ))}
+            </div>
+
+            <label className="mt-3">Dataset Name (Optional)</label>
+            <input
+                type="text"
+                value={config.datasetId || ''}
+                onChange={(e) => updateConfig('datasetId', e.target.value)}
+                placeholder="e.g. Sales_Q3_2026"
+                className="config-input"
+            />
+        </div>
+    );
+};
+
+
+const MongoDbStorageConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => (
+    <div className="config-section">
+        <label>Storage Target</label>
+        <select
+            value={config.collectionName || 'AnalysisResult'}
+            onChange={(e) => updateConfig('collectionName', e.target.value)}
+            className="config-input"
+        >
+            <option value="AnalysisResult">Analysis Results (Dashboard)</option>
+            <option value="RawData" disabled>Raw Dataset (Coming soon)</option>
+        </select>
+        <small className="help-text">Stores the summarized data so the dashboard can fetch it.</small>
+    </div>
+);
+
+// ----------------------------------------
 
 // Schedule Trigger Configuration
 const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {

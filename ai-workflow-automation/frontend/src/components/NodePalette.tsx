@@ -178,6 +178,22 @@ const nodeOptions: NodeOption[] = [
         category: 'data',
     },
     {
+        type: NODE_TYPES.CSV_READ,
+        icon: '📄',
+        label: 'CSV Reader',
+        description: 'Read and parse CSV data',
+        color: '#10B981',
+        category: 'data',
+    },
+    {
+        type: NODE_TYPES.MDB_STORAGE,
+        icon: '🗃️',
+        label: 'MongoDB Store',
+        description: 'Save output to MongoDB',
+        color: '#4DB33D',
+        category: 'data',
+    },
+    {
         type: NODE_TYPES.AIRTABLE,
         icon: '📋',
         label: 'Airtable',
@@ -210,6 +226,32 @@ const nodeOptions: NodeOption[] = [
         category: 'data',
     },
 
+    // ===== ANALYSIS =====
+    {
+        type: NODE_TYPES.DATA_CLEANER,
+        icon: '🧹',
+        label: 'Data Cleaner',
+        description: 'Clean array data values',
+        color: '#F472B6',
+        category: 'analysis',
+    },
+    {
+        type: NODE_TYPES.ANALYSIS_ENGINE,
+        icon: '📈',
+        label: 'Analysis Engine',
+        description: 'Analyze data arrays',
+        color: '#E11D48',
+        category: 'analysis',
+    },
+    {
+        type: NODE_TYPES.DASHBOARD_PORTAL,
+        icon: '🪟',
+        label: 'Dashboard Portal',
+        description: 'Launch external visualization',
+        color: '#667eea',
+        category: 'analysis',
+    },
+
     // ===== AI =====
     {
         type: NODE_TYPES.OPENAI,
@@ -227,10 +269,11 @@ const categoryLabels: Record<NodeCategory, string> = {
     http: '🌐 HTTP & API',
     communication: '💬 Communication',
     data: '📊 Data & Storage',
+    analysis: '📈 Analysis & Process',
     ai: '🤖 AI & ML',
 };
 
-const categoryOrder: NodeCategory[] = ['triggers', 'logic', 'http', 'communication', 'data', 'ai'];
+const categoryOrder: NodeCategory[] = ['triggers', 'logic', 'http', 'communication', 'data', 'analysis', 'ai'];
 
 const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -252,6 +295,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
         http: [],
         communication: [],
         data: [],
+        analysis: [],
         ai: [],
     };
 

@@ -42,6 +42,7 @@ class JobSchedulerService {
         cronExpression?: string;
         scheduleType: 'one-time' | 'recurring';
         personalizationCSV?: string;
+        maxExecutions?: number; // Maximum number of times to execute (for recurring)
     }): Promise<IScheduledJob> {
         try {
             const job = await ScheduledJob.create({
@@ -54,6 +55,8 @@ class JobSchedulerService {
                 scheduleType: jobData.scheduleType,
                 status: 'scheduled',
                 personalizationCSV: jobData.personalizationCSV,
+                maxExecutions: jobData.maxExecutions,
+                executionCount: 0,
             });
 
             console.log(`[JobScheduler] Created job ${job._id}`);
@@ -176,8 +179,27 @@ class JobSchedulerService {
                     this.cronTasks.delete(jobId);
                 }
             } else {
+                // For recurring jobs, increment execution count
+                job.executionCount = (job.executionCount || 0) + 1;
                 job.executedAt = new Date();
-                await job.save();
+
+                // Check if max executions reached
+                if (job.maxExecutions && job.executionCount >= job.maxExecutions) {
+                    job.status = 'sent'; // Mark as completed
+                    await job.save();
+
+                    // Stop the cron task
+                    const task = this.cronTasks.get(jobId);
+                    if (task) {
+                        task.stop();
+                        this.cronTasks.delete(jobId);
+                    }
+
+                    console.log(`[JobScheduler] Job ${jobId} reached max executions (${job.maxExecutions}), stopping`);
+                } else {
+                    await job.save();
+                    console.log(`[JobScheduler] Job ${jobId} executed ${job.executionCount}${job.maxExecutions ? `/${job.maxExecutions}` : ''} times`);
+                }
             }
 
             console.log(`[JobScheduler] Job ${jobId} executed: ${successCount} sent, ${failureCount} failed`);
@@ -208,6 +230,130 @@ class JobSchedulerService {
         } catch (error) {
             console.error(`[JobScheduler] Error cancelling job ${jobId}:`, error);
             throw error;
+        }
+    }
+
+    /**
+     * Send scheduled email immediately (Send Now functionality)
+     */
+    async sendNow(jobId: string): Promise<{ success: boolean; message: string; successCount?: number; failureCount?: number }> {
+        console.log(`[JobScheduler] Send Now triggered for job ${jobId}`);
+
+        try {
+            const job = await ScheduledJob.findById(jobId);
+
+            if (!job) {
+                return { success: false, message: 'Job not found' };
+            }
+
+            if (job.status === 'cancelled') {
+                return { success: false, message: 'Cannot send cancelled job' };
+            }
+
+            // Check if max executions reached for recurring jobs
+            if (job.scheduleType === 'recurring' && job.maxExecutions) {
+                if (job.executionCount >= job.maxExecutions) {
+                    return {
+                        success: false,
+                        message: `Job has already reached maximum executions (${job.executionCount}/${job.maxExecutions}). Cannot send.`
+                    };
+                }
+            }
+
+            let recipients: string[] = job.recipients;
+            if (job.recipientGroupId) {
+                const group = await RecipientGroup.findById(job.recipientGroupId);
+                if (group) {
+                    recipients = group.emails;
+                }
+            }
+
+            if (recipients.length === 0) {
+                return { success: false, message: 'No recipients found' };
+            }
+
+            let personalizationData: any[] = [];
+            if (job.personalizationCSV) {
+                personalizationData = await templateEngine.parseCSV(job.personalizationCSV);
+            }
+
+            const transporter = this.createTransporter();
+            let successCount = 0;
+            let failureCount = 0;
+
+            for (const recipient of recipients) {
+                try {
+                    let personalizedSubject = job.subject;
+                    let personalizedBody = job.body;
+
+                    const personalization = personalizationData.find(p => p.email === recipient);
+                    if (personalization) {
+                        personalizedSubject = templateEngine.personalize(job.subject, personalization.variables);
+                        personalizedBody = templateEngine.personalize(job.body, personalization.variables);
+                    }
+
+                    const info = await transporter.sendMail({
+                        from: process.env.SMTP_FROM || '"Workflow Automation" <no-reply@workflowpro.com>',
+                        to: recipient,
+                        subject: personalizedSubject,
+                        html: personalizedBody,
+                    });
+
+                    await deliveryLogger.logDelivery(jobId, recipient, 'sent', info.messageId);
+                    successCount++;
+                } catch (error: any) {
+                    await deliveryLogger.logDelivery(jobId, recipient, 'failed', undefined, error.message);
+                    failureCount++;
+                }
+            }
+
+            // Update job execution tracking
+            job.executedAt = new Date();
+
+            // For recurring jobs, increment execution count and check limits
+            if (job.scheduleType === 'recurring') {
+                job.executionCount = (job.executionCount || 0) + 1;
+
+                // Check if max executions reached after this send
+                if (job.maxExecutions && job.executionCount >= job.maxExecutions) {
+                    job.status = 'sent'; // Mark as completed
+                    await job.save();
+
+                    // Stop the cron task
+                    const task = this.cronTasks.get(jobId);
+                    if (task) {
+                        task.stop();
+                        this.cronTasks.delete(jobId);
+                    }
+
+                    console.log(`[JobScheduler] Send Now: Job ${jobId} reached max executions (${job.maxExecutions}), stopping`);
+
+                    return {
+                        success: true,
+                        message: `Email sent to ${successCount} recipient(s). ${failureCount > 0 ? `${failureCount} failed. ` : ''}Job has reached maximum executions (${job.executionCount}/${job.maxExecutions}) and has been stopped.`,
+                        successCount,
+                        failureCount
+                    };
+                } else {
+                    await job.save();
+                    console.log(`[JobScheduler] Send Now completed for ${jobId}: ${successCount} sent, ${failureCount} failed. Execution count: ${job.executionCount}${job.maxExecutions ? `/${job.maxExecutions}` : ''}`);
+                }
+            } else {
+                // For one-time jobs, just update execution time
+                await job.save();
+            }
+
+            console.log(`[JobScheduler] Send Now completed for ${jobId}: ${successCount} sent, ${failureCount} failed`);
+
+            return {
+                success: true,
+                message: `Email sent to ${successCount} recipient(s). ${failureCount > 0 ? `${failureCount} failed.` : ''}${job.scheduleType === 'recurring' && job.maxExecutions ? ` (${job.executionCount}/${job.maxExecutions} executions)` : ''}`,
+                successCount,
+                failureCount
+            };
+        } catch (error: any) {
+            console.error(`[JobScheduler] Error in Send Now for job ${jobId}:`, error);
+            return { success: false, message: error.message || 'Failed to send email' };
         }
     }
 

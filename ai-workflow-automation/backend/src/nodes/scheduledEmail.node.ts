@@ -15,7 +15,8 @@ export const scheduledEmailNode: WorkflowNode = {
         scheduledDateTime: { type: 'date', required: false },
         cronExpression: { type: 'string', required: false },
         scheduleType: { type: 'string', required: true, enum: ['one-time', 'recurring'] },
-        personalizationCSV: { type: 'string', required: false }
+        personalizationCSV: { type: 'string', required: false },
+        maxExecutions: { type: 'number', required: false } // Max times to execute for recurring
     },
 
     outputSchema: {
@@ -54,7 +55,8 @@ export const scheduledEmailNode: WorkflowNode = {
                 scheduledDateTime: input.scheduledDateTime ? new Date(input.scheduledDateTime) : undefined,
                 cronExpression: input.cronExpression,
                 scheduleType: input.scheduleType,
-                personalizationCSV: input.personalizationCSV
+                personalizationCSV: input.personalizationCSV,
+                maxExecutions: input.maxExecutions,
             });
 
             console.log(`[ScheduledEmailNode] Job scheduled successfully: ${job._id}`);

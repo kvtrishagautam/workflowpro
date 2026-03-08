@@ -34,7 +34,12 @@ export type NodeTypeValue =
     | 'notion'
     | 'openai'
     | 'mysql'
-    | 'postgres';
+    | 'postgres'
+    | 'csvRead'
+    | 'dataCleaner'
+    | 'analysisEngine'
+    | 'mongoDbStorage'
+    | 'dashboardPortal';
 
 export interface NodeProps {
     id: string;
@@ -97,6 +102,13 @@ export const NODE_TYPES = {
     NOTION: 'notion',
     MYSQL: 'mysql',
     POSTGRES: 'postgres',
+    CSV_READ: 'csvRead',
+    MDB_STORAGE: 'mongoDbStorage',
+
+    // Analysis
+    DATA_CLEANER: 'dataCleaner',
+    ANALYSIS_ENGINE: 'analysisEngine',
+    DASHBOARD_PORTAL: 'dashboardPortal',
 
     // AI
     OPENAI: 'openai',
@@ -119,7 +131,8 @@ export type NodeCategory =
     | 'communication'
     | 'data'
     | 'ai'
-    | 'http';
+    | 'http'
+    | 'analysis';
 
 // ============================================
 // Node-specific configuration interfaces

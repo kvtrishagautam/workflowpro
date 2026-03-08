@@ -98,6 +98,54 @@ class ApiService {
     }
 
     /**
+     * Send scheduled email immediately (Send Now)
+     */
+    async sendNow(jobId: string): Promise<{ message: string; successCount?: number; failureCount?: number }> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/scheduled-jobs/${jobId}/send-now`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: response.statusText }));
+                throw new Error(errorData.error || 'Failed to send email');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error sending email:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Cancel a scheduled job
+     */
+    async cancelJob(jobId: string): Promise<{ message: string }> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/scheduled-jobs/${jobId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: response.statusText }));
+                throw new Error(errorData.error || 'Failed to cancel job');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error cancelling job:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Map frontend node types to backend node types
      */
     mapNodeTypeToBackend(frontendType: string): string {
@@ -105,12 +153,18 @@ class ApiService {
             'emailDiscovery': 'EMAIL_DISCOVERY',
             'emailSending': 'EMAIL_SENDING',
             'scheduledEmail': 'SCHEDULED_EMAIL',
+            'googleSheets': 'GOOGLE_SHEETS',
             'webhook': 'WEBHOOK',
             'javascript': 'JAVASCRIPT',
             'slack': 'SLACK',
             'http': 'HTTP',
             'conditional': 'CONDITIONAL',
             'delay': 'DELAY',
+            'csvRead': 'csvRead',
+            'dataCleaner': 'dataCleaner',
+            'analysisEngine': 'analysisEngine',
+            'mongoDbStorage': 'mongoDbStorage',
+            'dashboardPortal': 'dashboardPortal',
         };
         return typeMap[frontendType] || frontendType.toUpperCase();
     }
