@@ -10,15 +10,18 @@ export interface NodeData {
 }
 
 // All supported node types
-export type NodeTypeValue = 
-    | 'webhook' 
-    | 'javascript' 
-    | 'slack' 
-    | 'http' 
-    | 'conditional' 
+export type NodeTypeValue =
+    | 'webhook'
+    | 'javascript'
+    | 'slack'
+    | 'http'
+    | 'conditional'
     | 'delay'
     | 'schedule'
     | 'email'
+    | 'emailDiscovery'
+    | 'emailSending'
+    | 'scheduledEmail'
     | 'whatsapp'
     | 'telegram'
     | 'googleSheets'
@@ -31,7 +34,12 @@ export type NodeTypeValue =
     | 'notion'
     | 'openai'
     | 'mysql'
-    | 'postgres';
+    | 'postgres'
+    | 'csvRead'
+    | 'dataCleaner'
+    | 'analysisEngine'
+    | 'mongoDbStorage'
+    | 'dashboardPortal';
 
 export interface NodeProps {
     id: string;
@@ -65,7 +73,7 @@ export const NODE_TYPES = {
     // Triggers
     WEBHOOK: 'webhook',
     SCHEDULE: 'schedule',
-    
+
     // Core Logic
     JAVASCRIPT: 'javascript',
     CONDITIONAL: 'conditional',
@@ -74,24 +82,34 @@ export const NODE_TYPES = {
     FILTER: 'filter',
     MERGE: 'merge',
     SPLIT_BATCHES: 'splitBatches',
-    
+
     // HTTP & APIs
     HTTP: 'http',
-    
+
     // Communication
     SLACK: 'slack',
     EMAIL: 'email',
+    EMAIL_DISCOVERY: 'emailDiscovery',
+    EMAIL_SENDING: 'emailSending',
+    SCHEDULED_EMAIL: 'scheduledEmail',
     WHATSAPP: 'whatsapp',
     TELEGRAM: 'telegram',
     DISCORD: 'discord',
-    
+
     // Data & Storage
     GOOGLE_SHEETS: 'googleSheets',
     AIRTABLE: 'airtable',
     NOTION: 'notion',
     MYSQL: 'mysql',
     POSTGRES: 'postgres',
-    
+    CSV_READ: 'csvRead',
+    MDB_STORAGE: 'mongoDbStorage',
+
+    // Analysis
+    DATA_CLEANER: 'dataCleaner',
+    ANALYSIS_ENGINE: 'analysisEngine',
+    DASHBOARD_PORTAL: 'dashboardPortal',
+
     // AI
     OPENAI: 'openai',
 };
@@ -107,13 +125,14 @@ export interface NodeConfig {
 }
 
 // Node categories for organization
-export type NodeCategory = 
+export type NodeCategory =
     | 'triggers'
     | 'logic'
     | 'communication'
     | 'data'
     | 'ai'
-    | 'http';
+    | 'http'
+    | 'analysis';
 
 // ============================================
 // Node-specific configuration interfaces
@@ -309,10 +328,10 @@ export interface SetConfig {
 export interface FilterConfig {
     conditions: {
         field: string;
-        operator: 'equals' | 'notEquals' | 'contains' | 'notContains' | 
-                  'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' |
-                  'greaterOrEqual' | 'lessOrEqual' | 'isEmpty' | 'isNotEmpty' |
-                  'regex' | 'isTrue' | 'isFalse';
+        operator: 'equals' | 'notEquals' | 'contains' | 'notContains' |
+        'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' |
+        'greaterOrEqual' | 'lessOrEqual' | 'isEmpty' | 'isNotEmpty' |
+        'regex' | 'isTrue' | 'isFalse';
         value: any;
     }[];
     combineConditions: 'AND' | 'OR';

@@ -120,6 +120,30 @@ const nodeOptions: NodeOption[] = [
         category: 'communication',
     },
     {
+        type: NODE_TYPES.EMAIL_DISCOVERY,
+        icon: '🔍',
+        label: 'Email Discovery',
+        description: 'Discover emails from websites',
+        color: '#10B981',
+        category: 'communication',
+    },
+    {
+        type: NODE_TYPES.EMAIL_SENDING,
+        icon: '📤',
+        label: 'Email Sending',
+        description: 'Send bulk emails',
+        color: '#F59E0B',
+        category: 'communication',
+    },
+    {
+        type: NODE_TYPES.SCHEDULED_EMAIL,
+        icon: '📅',
+        label: 'Scheduled Email',
+        description: 'Schedule emails for later',
+        color: '#8B5CF6',
+        category: 'communication',
+    },
+    {
         type: NODE_TYPES.WHATSAPP,
         icon: '📱',
         label: 'WhatsApp',
@@ -151,6 +175,22 @@ const nodeOptions: NodeOption[] = [
         label: 'Google Sheets',
         description: 'Read/write spreadsheet data',
         color: '#34A853',
+        category: 'data',
+    },
+    {
+        type: NODE_TYPES.CSV_READ,
+        icon: '📄',
+        label: 'CSV Reader',
+        description: 'Read and parse CSV data',
+        color: '#10B981',
+        category: 'data',
+    },
+    {
+        type: NODE_TYPES.MDB_STORAGE,
+        icon: '🗃️',
+        label: 'MongoDB Store',
+        description: 'Save output to MongoDB',
+        color: '#4DB33D',
         category: 'data',
     },
     {
@@ -186,6 +226,32 @@ const nodeOptions: NodeOption[] = [
         category: 'data',
     },
 
+    // ===== ANALYSIS =====
+    {
+        type: NODE_TYPES.DATA_CLEANER,
+        icon: '🧹',
+        label: 'Data Cleaner',
+        description: 'Clean array data values',
+        color: '#F472B6',
+        category: 'analysis',
+    },
+    {
+        type: NODE_TYPES.ANALYSIS_ENGINE,
+        icon: '📈',
+        label: 'Analysis Engine',
+        description: 'Analyze data arrays',
+        color: '#E11D48',
+        category: 'analysis',
+    },
+    {
+        type: NODE_TYPES.DASHBOARD_PORTAL,
+        icon: '🪟',
+        label: 'Dashboard Portal',
+        description: 'Launch external visualization',
+        color: '#667eea',
+        category: 'analysis',
+    },
+
     // ===== AI =====
     {
         type: NODE_TYPES.OPENAI,
@@ -203,10 +269,11 @@ const categoryLabels: Record<NodeCategory, string> = {
     http: '🌐 HTTP & API',
     communication: '💬 Communication',
     data: '📊 Data & Storage',
+    analysis: '📈 Analysis & Process',
     ai: '🤖 AI & ML',
 };
 
-const categoryOrder: NodeCategory[] = ['triggers', 'logic', 'http', 'communication', 'data', 'ai'];
+const categoryOrder: NodeCategory[] = ['triggers', 'logic', 'http', 'communication', 'data', 'analysis', 'ai'];
 
 const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -228,6 +295,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
         http: [],
         communication: [],
         data: [],
+        analysis: [],
         ai: [],
     };
 
@@ -294,7 +362,10 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
                                             onDragStart={(e) => {
                                                 e.dataTransfer?.setData('nodeType', option.type);
                                             }}
-                                            onClick={() => onAddNode(option.type)}
+                                            onClick={() => {
+                                                console.log('🔘 Node palette item clicked:', option.type);
+                                                onAddNode(option.type);
+                                            }}
                                             title={option.description}
                                         >
                                             <div className="item-icon">{option.icon}</div>

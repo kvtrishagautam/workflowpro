@@ -1,0 +1,108 @@
+{
+    "id": "multi-category-business-intel",
+    "name": "Multi-Category Business Intelligence Pipeline",
+    "description": "Demonstrates the multi-category selection feature. A single CSV dataset is analyzed through multiple lenses simultaneously — as Tasks (status/owner/priority) AND as Sales (revenue figures). Both results are stored as separate documents in MongoDB.",
+    "nodes": [
+        {
+            "id": "csv_read_1",
+            "type": "csvRead",
+            "data": {
+                "label": "Import Business Data",
+                "config": {
+                    "csvData": "Deal ID,Project Name,Task Title,Status,Priority,Owner,Amount,Category,Date\nDEAL-001,Alpha CRM,Requirements gathering,Completed,High,Sarah Chen,15000,Software,2026-01-05\nDEAL-002,Alpha CRM,UI/UX design sprint,Completed,Medium,James Park,8000,Design,2026-01-12\nDEAL-003,Beta Analytics,Data pipeline setup,In Progress,High,Sarah Chen,22000,Software,2026-01-20\nDEAL-004,Alpha CRM,Backend API development,In Progress,High,Maria Lopez,35000,Software,2026-01-25\nDEAL-005,Beta Analytics,Dashboard wireframes,Completed,Medium,James Park,6500,Design,2026-02-01\nDEAL-006,Gamma Portal,Infrastructure planning,Not Started,High,Raj Patel,18000,Consulting,2026-02-05\nDEAL-007,Alpha CRM,QA testing & UAT,Not Started,Medium,Maria Lopez,12000,Software,2026-02-10\nDEAL-008,Beta Analytics,ML model training,In Progress,High,Sarah Chen,45000,Software,2026-02-15\nDEAL-009,Gamma Portal,Security audit,Not Started,High,Raj Patel,20000,Consulting,2026-02-20\nDEAL-010,Alpha CRM,Production deployment,Not Started,High,James Park,10000,DevOps,2026-02-28\nDEAL-011,Beta Analytics,Client training,Completed,Low,Maria Lopez,5000,Training,2026-03-01\nDEAL-012,Gamma Portal,Frontend development,In Progress,High,Sarah Chen,30000,Software,2026-03-05",
+                    "delimiter": ","
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "data_cleaner_1",
+            "type": "dataCleaner",
+            "data": {
+                "label": "Clean & Standardize",
+                "config": {
+                    "removeEmptyRows": true,
+                    "trimStrings": true,
+                    "convertToNumbers": true
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 280
+            }
+        },
+        {
+            "id": "analysis_engine_1",
+            "type": "analysisEngine",
+            "data": {
+                "label": "Multi-Category Analysis",
+                "config": {
+                    "categories": [
+                        "Tasks",
+                        "Sales"
+                    ],
+                    "datasetId": "business_intel_Q1_2026"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 460
+            }
+        },
+        {
+            "id": "mongo_storage_1",
+            "type": "mongoDbStorage",
+            "data": {
+                "label": "Store Both Results",
+                "config": {
+                    "collectionName": "AnalysisResult"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 640
+            }
+        },
+        {
+            "id": "dashboard_portal_1",
+            "type": "dashboardPortal",
+            "data": {
+                "label": "BI Dashboard",
+                "config": {
+                    "defaultCategory": "Tasks"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 820
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "csv_read_1",
+            "target": "data_cleaner_1"
+        },
+        {
+            "id": "e2",
+            "source": "data_cleaner_1",
+            "target": "analysis_engine_1"
+        },
+        {
+            "id": "e3",
+            "source": "analysis_engine_1",
+            "target": "mongo_storage_1"
+        },
+        {
+            "id": "e4",
+            "source": "mongo_storage_1",
+            "target": "dashboard_portal_1"
+        }
+    ],
+    "createdAt": "2026-03-08T11:00:00.000Z",
+    "updatedAt": "2026-03-08T11:00:00.000Z"
+}
