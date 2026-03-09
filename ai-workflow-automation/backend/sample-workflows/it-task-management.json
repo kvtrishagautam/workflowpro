@@ -1,0 +1,103 @@
+{
+    "id": "it-project-task-tracker",
+    "name": "IT Project Task Management Pipeline",
+    "description": "Sprint tracking with 30 tasks across 3 projects, with statuses, priorities, owners, story points, and due dates.",
+    "nodes": [
+        {
+            "id": "csv_read_1",
+            "type": "csvRead",
+            "data": {
+                "label": "Import Sprint Tasks",
+                "config": {
+                    "csvData": "Task ID,Project Name,Task Title,Status,Priority,Owner,Estimated Hours,Due Date,Sprint,Story Points,Labels\nTASK-101,WorkflowPro,Implement user authentication,Completed,High,Priya Sharma,16,2026-01-10,Sprint 12,8,backend\nTASK-102,WorkflowPro,Design REST API endpoints,Completed,High,Rahul Verma,24,2026-01-15,Sprint 12,13,backend\nTASK-103,WorkflowPro,Set up CI/CD pipeline,In Progress,Medium,Anita Desai,12,2026-02-01,Sprint 13,5,devops\nTASK-104,DataSync,Build CSV import module,Completed,High,Vikram Patel,20,2026-01-12,Sprint 12,8,backend\nTASK-105,DataSync,Write unit tests for parser,In Progress,Medium,Priya Sharma,8,2026-02-05,Sprint 13,3,testing\nTASK-106,WorkflowPro,Create dashboard UI mockups,Completed,Low,Meera Nair,10,2026-01-18,Sprint 12,5,frontend\nTASK-107,DataSync,Optimize database queries,Not Started,High,Rahul Verma,16,2026-02-15,Sprint 14,8,backend\nTASK-108,WorkflowPro,Integrate Slack notifications,In Progress,Medium,Vikram Patel,12,2026-02-08,Sprint 13,5,integration\nTASK-109,DataSync,Implement error handling,Not Started,High,Anita Desai,8,2026-02-20,Sprint 14,3,backend\nTASK-110,WorkflowPro,Performance load testing,Not Started,Low,Meera Nair,6,2026-02-25,Sprint 14,3,testing\nTASK-111,WorkflowPro,Write API documentation,Completed,Medium,Priya Sharma,8,2026-01-20,Sprint 12,3,docs\nTASK-112,DataSync,Deploy staging environment,In Progress,High,Rahul Verma,4,2026-02-10,Sprint 13,2,devops\nTASK-113,WorkflowPro,Fix login page CSS bugs,Completed,Low,Vikram Patel,3,2026-01-22,Sprint 12,1,frontend\nTASK-114,DataSync,Add rate limiting middleware,Not Started,Medium,Anita Desai,6,2026-02-28,Sprint 14,3,backend\nTASK-115,WorkflowPro,Implement webhook handlers,Completed,High,Meera Nair,14,2026-01-25,Sprint 12,8,backend\nTASK-116,WorkflowPro,Configure MongoDB indexes,In Progress,Medium,Priya Sharma,4,2026-02-12,Sprint 13,2,backend\nTASK-117,DataSync,Build real-time sync engine,Not Started,High,Rahul Verma,30,2026-03-05,Sprint 14,13,backend\nTASK-118,WorkflowPro,Set up Sentry monitoring,Completed,Medium,Vikram Patel,5,2026-01-28,Sprint 12,2,devops\nTASK-119,DataSync,Create data validation layer,In Progress,High,Anita Desai,10,2026-02-14,Sprint 13,5,backend\nTASK-120,WorkflowPro,Mobile responsive layout,Not Started,Low,Meera Nair,12,2026-03-10,Sprint 14,5,frontend\nTASK-121,ClientPortal,Design client onboarding flow,Completed,High,Priya Sharma,14,2026-01-14,Sprint 12,8,frontend\nTASK-122,ClientPortal,Build notification center,In Progress,Medium,Rahul Verma,18,2026-02-18,Sprint 13,8,frontend\nTASK-123,ClientPortal,SSO integration with Azure AD,Not Started,High,Vikram Patel,20,2026-03-08,Sprint 14,13,integration\nTASK-124,ClientPortal,Create billing dashboard,In Progress,High,Anita Desai,16,2026-02-22,Sprint 13,8,frontend\nTASK-125,ClientPortal,Multi-tenant data isolation,Not Started,High,Meera Nair,24,2026-03-15,Sprint 14,13,backend\nTASK-126,WorkflowPro,Implement email templates,Completed,Medium,Priya Sharma,6,2026-01-30,Sprint 12,3,backend\nTASK-127,DataSync,WebSocket live updates,In Progress,Medium,Rahul Verma,14,2026-02-25,Sprint 13,8,backend\nTASK-128,ClientPortal,Accessibility audit & fixes,Not Started,Low,Vikram Patel,10,2026-03-12,Sprint 14,5,frontend\nTASK-129,WorkflowPro,Database migration scripts,Completed,High,Anita Desai,8,2026-01-28,Sprint 12,5,backend\nTASK-130,DataSync,API rate limiter dashboard,Not Started,Low,Meera Nair,8,2026-03-18,Sprint 14,3,frontend",
+                    "delimiter": ","
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "data_cleaner_1",
+            "type": "dataCleaner",
+            "data": {
+                "label": "Clean Task Records",
+                "config": {
+                    "removeEmptyRows": true,
+                    "trimStrings": true,
+                    "convertToNumbers": true
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 280
+            }
+        },
+        {
+            "id": "analysis_engine_1",
+            "type": "analysisEngine",
+            "data": {
+                "label": "Sprint Task Analysis",
+                "config": {
+                    "categories": [
+                        "Tasks"
+                    ],
+                    "datasetId": "sprint_tasks_Q1_2026"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 460
+            }
+        },
+        {
+            "id": "mongo_storage_1",
+            "type": "mongoDbStorage",
+            "data": {
+                "label": "Persist to Database",
+                "config": {}
+            },
+            "position": {
+                "x": 100,
+                "y": 640
+            }
+        },
+        {
+            "id": "dashboard_portal_1",
+            "type": "dashboardPortal",
+            "data": {
+                "label": "Sprint Dashboard",
+                "config": {}
+            },
+            "position": {
+                "x": 100,
+                "y": 820
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "csv_read_1",
+            "target": "data_cleaner_1"
+        },
+        {
+            "id": "e2",
+            "source": "data_cleaner_1",
+            "target": "analysis_engine_1"
+        },
+        {
+            "id": "e3",
+            "source": "analysis_engine_1",
+            "target": "mongo_storage_1"
+        },
+        {
+            "id": "e4",
+            "source": "mongo_storage_1",
+            "target": "dashboard_portal_1"
+        }
+    ],
+    "createdAt": "2026-03-08T13:00:00.000Z",
+    "updatedAt": "2026-03-08T13:00:00.000Z"
+}

@@ -1,0 +1,109 @@
+{
+    "id": "hr-attendance-analytics",
+    "name": "HR Employee Attendance Analytics",
+    "description": "Workflow for monthly employee attendance tracking. Ingests HR biometric data exports, cleans records, runs attendance analysis (attendance rate, department comparison, daily trends), stores in MongoDB, and displays via dashboard.",
+    "nodes": [
+        {
+            "id": "csv_read_1",
+            "type": "csvRead",
+            "data": {
+                "label": "Import Attendance Data",
+                "config": {
+                    "csvData": "Employee ID,Employee Name,Department,Date,Status,Check-in Time,Check-out Time,Hours Worked\nEMP001,Aisha Khan,Engineering,2026-02-03,Present,09:02,18:15,9.2\nEMP002,Ravi Kumar,Marketing,2026-02-03,Present,08:55,17:30,8.6\nEMP003,Sneha Gupta,Engineering,2026-02-03,Absent,,,0\nEMP004,Arjun Mehta,HR,2026-02-03,Present,09:10,18:00,8.8\nEMP005,Fatima Ali,Finance,2026-02-03,Present,08:45,17:45,9.0\nEMP001,Aisha Khan,Engineering,2026-02-04,Present,08:58,18:30,9.5\nEMP002,Ravi Kumar,Marketing,2026-02-04,Absent,,,0\nEMP003,Sneha Gupta,Engineering,2026-02-04,Present,09:05,17:50,8.8\nEMP004,Arjun Mehta,HR,2026-02-04,Present,09:00,18:10,9.2\nEMP005,Fatima Ali,Finance,2026-02-04,Present,08:50,17:40,8.8\nEMP001,Aisha Khan,Engineering,2026-02-05,Present,09:00,18:00,9.0\nEMP002,Ravi Kumar,Marketing,2026-02-05,Present,09:15,17:30,8.2\nEMP003,Sneha Gupta,Engineering,2026-02-05,Present,08:45,18:15,9.5\nEMP004,Arjun Mehta,HR,2026-02-05,Absent,,,0\nEMP005,Fatima Ali,Finance,2026-02-05,Present,09:00,17:55,8.9\nEMP001,Aisha Khan,Engineering,2026-02-06,Present,08:55,18:20,9.4\nEMP002,Ravi Kumar,Marketing,2026-02-06,Present,09:10,17:45,8.6\nEMP003,Sneha Gupta,Engineering,2026-02-06,Absent,,,0\nEMP004,Arjun Mehta,HR,2026-02-06,Present,09:05,18:00,8.9\nEMP005,Fatima Ali,Finance,2026-02-06,Absent,,,0\nEMP001,Aisha Khan,Engineering,2026-02-07,Present,09:00,18:10,9.2\nEMP002,Ravi Kumar,Marketing,2026-02-07,Present,08:50,17:30,8.7\nEMP003,Sneha Gupta,Engineering,2026-02-07,Present,09:15,18:00,8.8\nEMP004,Arjun Mehta,HR,2026-02-07,Present,09:00,18:05,9.1\nEMP005,Fatima Ali,Finance,2026-02-07,Present,08:55,17:50,8.9",
+                    "delimiter": ",",
+                    "skipEmptyLines": true
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "data_cleaner_1",
+            "type": "dataCleaner",
+            "data": {
+                "label": "Clean Attendance Records",
+                "config": {
+                    "removeEmptyRows": true,
+                    "trimStrings": true,
+                    "convertToNumbers": true,
+                    "fillMissingValues": ""
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 280
+            }
+        },
+        {
+            "id": "analysis_engine_1",
+            "type": "analysisEngine",
+            "data": {
+                "label": "Attendance Analytics",
+                "config": {
+                    "categories": [
+                        "Attendance"
+                    ],
+                    "datasetId": "hr_attendance_feb_2026"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 460
+            }
+        },
+        {
+            "id": "mongo_storage_1",
+            "type": "mongoDbStorage",
+            "data": {
+                "label": "Store in MongoDB",
+                "config": {
+                    "collectionName": "AnalysisResult"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 640
+            }
+        },
+        {
+            "id": "dashboard_portal_1",
+            "type": "dashboardPortal",
+            "data": {
+                "label": "HR Attendance Dashboard",
+                "config": {
+                    "defaultCategory": "Attendance"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 820
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "csv_read_1",
+            "target": "data_cleaner_1"
+        },
+        {
+            "id": "e2",
+            "source": "data_cleaner_1",
+            "target": "analysis_engine_1"
+        },
+        {
+            "id": "e3",
+            "source": "analysis_engine_1",
+            "target": "mongo_storage_1"
+        },
+        {
+            "id": "e4",
+            "source": "mongo_storage_1",
+            "target": "dashboard_portal_1"
+        }
+    ],
+    "createdAt": "2026-03-08T11:00:00.000Z",
+    "updatedAt": "2026-03-08T11:00:00.000Z"
+}

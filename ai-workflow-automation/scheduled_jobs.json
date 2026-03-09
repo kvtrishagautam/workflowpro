@@ -1,0 +1,132 @@
+﻿{
+    "jobs":  [
+                 {
+                     "_id":  "69876a75440714365fde3665",
+                     "subject":  "dzfx",
+                     "body":  "sdsdssf",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "cronExpression":  "*/1 * * * *",
+                     "scheduleType":  "recurring",
+                     "status":  "scheduled",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-07T16:38:13.962Z",
+                     "updatedAt":  "2026-02-08T11:28:06.820Z",
+                     "__v":  0,
+                     "executedAt":  "2026-02-08T11:28:06.819Z",
+                     "executionCount":  8
+                 },
+                 {
+                     "_id":  "698760dd440714365fde356f",
+                     "subject":  "hey",
+                     "body":  "heyy,",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com,aadhlemubarak@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "cronExpression":  "*/1 * * * *",
+                     "scheduleType":  "recurring",
+                     "status":  "scheduled",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-07T15:57:17.128Z",
+                     "updatedAt":  "2026-02-08T11:28:07.053Z",
+                     "__v":  0,
+                     "executedAt":  "2026-02-08T11:28:07.052Z",
+                     "executionCount":  8
+                 },
+                 {
+                     "_id":  "69875838440714365fde3525",
+                     "subject":  "hey",
+                     "body":  "hellooo",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "cronExpression":  "*/2 * * * *",
+                     "scheduleType":  "recurring",
+                     "status":  "scheduled",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-07T15:20:24.375Z",
+                     "updatedAt":  "2026-02-08T11:28:08.168Z",
+                     "__v":  0,
+                     "executedAt":  "2026-02-08T11:28:08.167Z",
+                     "executionCount":  4
+                 },
+                 {
+                     "executionCount":  0,
+                     "_id":  "6982ce7cc2a7d6a559f5739a",
+                     "subject":  "fghj",
+                     "body":  "gfhk",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "scheduledDateTime":  "2026-02-04T04:44:00.000Z",
+                     "cronExpression":  "",
+                     "scheduleType":  "one-time",
+                     "status":  "sent",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-04T04:43:40.352Z",
+                     "updatedAt":  "2026-02-04T04:44:06.065Z",
+                     "__v":  0,
+                     "executedAt":  "2026-02-04T04:44:06.063Z"
+                 },
+                 {
+                     "executionCount":  0,
+                     "_id":  "698275ca632ff1733603f0bb",
+                     "subject":  "ddsa",
+                     "body":  "sdv",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "scheduledDateTime":  "2026-02-03T22:26:00.000Z",
+                     "cronExpression":  "",
+                     "scheduleType":  "one-time",
+                     "status":  "sent",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-03T22:25:14.149Z",
+                     "updatedAt":  "2026-02-03T22:26:05.655Z",
+                     "__v":  0,
+                     "executedAt":  "2026-02-03T22:26:05.654Z"
+                 },
+                 {
+                     "executionCount":  0,
+                     "_id":  "698275b6632ff1733603f0b9",
+                     "subject":  "ddsa",
+                     "body":  "sdv",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "scheduledDateTime":  "2026-02-03T22:19:00.000Z",
+                     "cronExpression":  "",
+                     "scheduleType":  "one-time",
+                     "status":  "scheduled",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-03T22:24:54.407Z",
+                     "updatedAt":  "2026-02-03T22:24:54.407Z",
+                     "__v":  0
+                 },
+                 {
+                     "executionCount":  0,
+                     "_id":  "6982745b632ff1733603f0b7",
+                     "subject":  "ddsa",
+                     "body":  "sdv",
+                     "recipients":  [
+                                        "koilothkhadeejahiba@gmail.com"
+                                    ],
+                     "recipientGroupId":  "",
+                     "scheduledDateTime":  "2026-02-03T22:19:00.000Z",
+                     "cronExpression":  "",
+                     "scheduleType":  "one-time",
+                     "status":  "scheduled",
+                     "personalizationCSV":  "",
+                     "createdAt":  "2026-02-03T22:19:07.864Z",
+                     "updatedAt":  "2026-02-03T22:19:07.864Z",
+                     "__v":  0
+                 }
+             ]
+}

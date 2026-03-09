@@ -1,0 +1,103 @@
+{
+    "id": "corporate-expense-analysis",
+    "name": "Corporate Expense Reporting Pipeline",
+    "description": "Comprehensive Q1 2026 corporate expense analysis with 30 detailed expense records across multiple departments, categories, merchants, and payment methods.",
+    "nodes": [
+        {
+            "id": "csv_read_1",
+            "type": "csvRead",
+            "data": {
+                "label": "Import Expense Reports",
+                "config": {
+                    "csvData": "Report ID,Employee,Department,Category,Merchant,Amount,Date,Payment Method,Approved,Project,Description\nEXP001,Alice Johnson,Engineering,Cloud Infrastructure,AWS,42000,2026-01-05,Invoice,Yes,Alpha CRM,Monthly AWS hosting & compute\nEXP002,Bob Smith,Marketing,Advertising,Google Ads,25000,2026-01-08,Invoice,Yes,Brand Campaign,Q1 search ads budget\nEXP003,Carol White,Engineering,Software Licenses,JetBrains,12000,2026-01-10,Corporate Card,Yes,Alpha CRM,Annual IDE licenses for team\nEXP004,David Lee,Finance,Office Supplies,Amazon Business,3200,2026-01-12,Corporate Card,Yes,Operations,Monitors and peripherals\nEXP005,Eve Martinez,HR,Recruitment,LinkedIn Premium,15000,2026-01-15,Corporate Card,Yes,Hiring Q1,Premium recruiter seat\nEXP006,Frank Chen,Engineering,Travel,MakeMyTrip,18500,2026-01-18,Corporate Card,Yes,Client Visit,Bangalore client onsite\nEXP007,Grace Kim,Sales,Client Meals,Hotel Taj,4800,2026-01-20,Reimbursement,Yes,Enterprise Deal,Client dinner meeting\nEXP008,Henry Patel,Engineering,Cloud Infrastructure,Azure,38000,2026-01-22,Invoice,Yes,Beta Analytics,Azure ML pipeline costs\nEXP009,Alice Johnson,Engineering,Training,Coursera Enterprise,8500,2026-01-25,Invoice,Yes,Team Development,Engineering upskilling program\nEXP010,Bob Smith,Marketing,Advertising,Meta Ads,18000,2026-02-01,Invoice,Yes,Brand Campaign,Instagram & Facebook ads\nEXP011,Carol White,Engineering,Software Licenses,GitHub Enterprise,9500,2026-02-03,Invoice,Yes,Alpha CRM,Annual GitHub org license\nEXP012,David Lee,Finance,Training,Udemy Business,3600,2026-02-05,Corporate Card,Yes,Team Development,Finance team certifications\nEXP013,Eve Martinez,HR,Recruitment,Naukri Premium,8000,2026-02-08,Corporate Card,Yes,Hiring Q1,Job posting credits\nEXP014,Frank Chen,Engineering,Travel,AirIndia,22000,2026-02-10,Corporate Card,Yes,Conference,Developer conference travel\nEXP015,Grace Kim,Sales,Client Meals,ITC Grand,5200,2026-02-12,Reimbursement,Yes,Enterprise Deal,Prospect lunch meeting\nEXP016,Henry Patel,Engineering,Cloud Infrastructure,AWS,45000,2026-02-15,Invoice,Yes,Beta Analytics,GPU compute for ML training\nEXP017,Alice Johnson,Engineering,Software Licenses,Figma,5400,2026-02-18,Corporate Card,Yes,Alpha CRM,Design tool enterprise license\nEXP018,Bob Smith,Marketing,Office Supplies,Staples India,1800,2026-02-20,Reimbursement,Yes,Operations,Trade show materials\nEXP019,Carol White,Engineering,Travel,Uber Business,950,2026-02-22,Corporate Card,Yes,Client Visit,Local transport week\nEXP020,David Lee,Finance,Office Supplies,Amazon Business,2400,2026-02-25,Corporate Card,Yes,Operations,Standing desks x2\nEXP021,Eve Martinez,HR,Training,LinkedIn Learning,6500,2026-02-28,Invoice,Yes,Team Development,Company-wide learning platform\nEXP022,Frank Chen,Engineering,Cloud Infrastructure,GCP,35000,2026-03-02,Invoice,Yes,Gamma Portal,GCP Kubernetes cluster\nEXP023,Grace Kim,Sales,Travel,IRCTC,2800,2026-03-04,Reimbursement,Yes,Regional Sales,Train tickets Mumbai-Delhi\nEXP024,Henry Patel,Engineering,Software Licenses,DataDog,14000,2026-03-06,Invoice,Yes,Beta Analytics,APM monitoring annual\nEXP025,Alice Johnson,Engineering,Training,PluralSight,4200,2026-03-08,Corporate Card,Yes,Team Development,Cloud architecture courses\nEXP026,Bob Smith,Marketing,Advertising,LinkedIn Ads,12000,2026-03-10,Invoice,Yes,B2B Campaign,Sponsored content campaign\nEXP027,Carol White,Engineering,Travel,MakeMyTrip,16000,2026-03-12,Corporate Card,Yes,Conference,React India conference\nEXP028,David Lee,Finance,Client Meals,Marriott,3800,2026-03-14,Reimbursement,Yes,Audit Prep,External auditor dinner\nEXP029,Eve Martinez,HR,Office Supplies,Amazon Business,1500,2026-03-16,Corporate Card,Yes,Operations,Ergonomic chairs x3\nEXP030,Frank Chen,Engineering,Cloud Infrastructure,AWS,48000,2026-03-18,Invoice,Yes,Alpha CRM,Q1 final AWS billing",
+                    "delimiter": ","
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "data_cleaner_1",
+            "type": "dataCleaner",
+            "data": {
+                "label": "Clean Expense Records",
+                "config": {
+                    "removeEmptyRows": true,
+                    "trimStrings": true,
+                    "convertToNumbers": true
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 280
+            }
+        },
+        {
+            "id": "analysis_engine_1",
+            "type": "analysisEngine",
+            "data": {
+                "label": "Expense Analysis",
+                "config": {
+                    "categories": [
+                        "Expenses"
+                    ],
+                    "datasetId": "corporate_expenses_Q1_2026"
+                }
+            },
+            "position": {
+                "x": 100,
+                "y": 460
+            }
+        },
+        {
+            "id": "mongo_storage_1",
+            "type": "mongoDbStorage",
+            "data": {
+                "label": "Save to MongoDB",
+                "config": {}
+            },
+            "position": {
+                "x": 100,
+                "y": 640
+            }
+        },
+        {
+            "id": "dashboard_portal_1",
+            "type": "dashboardPortal",
+            "data": {
+                "label": "Expense Dashboard",
+                "config": {}
+            },
+            "position": {
+                "x": 100,
+                "y": 820
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "csv_read_1",
+            "target": "data_cleaner_1"
+        },
+        {
+            "id": "e2",
+            "source": "data_cleaner_1",
+            "target": "analysis_engine_1"
+        },
+        {
+            "id": "e3",
+            "source": "analysis_engine_1",
+            "target": "mongo_storage_1"
+        },
+        {
+            "id": "e4",
+            "source": "mongo_storage_1",
+            "target": "dashboard_portal_1"
+        }
+    ],
+    "createdAt": "2026-03-08T13:00:00.000Z",
+    "updatedAt": "2026-03-08T13:00:00.000Z"
+}

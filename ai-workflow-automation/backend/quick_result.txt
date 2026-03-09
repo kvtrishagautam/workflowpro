@@ -1,0 +1,22 @@
+Testing Email Discovery with opensource keywords...
+
+[EmailDiscovery] Starting real email scraping...
+[EmailDiscovery] Searching for pages with keywords: opensource
+[EmailDiscovery] Scraping 2 URLs...
+[EmailDiscovery] Fetching: https://www.apache.org/foundation/contact.html
+[EmailDiscovery] ??? Found 3 emails from https://www.apache.org/foundation/contact.html
+[EmailDiscovery] Fetching: https://www.linuxfoundation.org/about/contact
+[EmailDiscovery] ??? No emails found on https://www.linuxfoundation.org/about/contact
+[EmailDiscovery] Scraping complete: 1 successful, 0 failed
+[EmailDiscovery] Discovered 3 unique valid emails
+
+=== RESULT ===
+Status: success
+Emails found: 3
+Total scraped: 3
+Unique count: 3
+
+Discovered emails:
+1. press@apache.org (from: https://www.apache.org/foundation/contact.html)
+2. fundraising@apache.org (from: https://www.apache.org/foundation/contact.html)
+3. apache@apache.org (from: https://www.apache.org/foundation/contact.html)

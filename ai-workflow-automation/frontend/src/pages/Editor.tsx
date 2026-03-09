@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import Canvas from '../components/Canvas';
 import NodePalette from '../components/NodePalette';
 import RunHistory from '../components/RunHistory';
@@ -8,9 +9,11 @@ import { Workflow, NodeProps, NODE_TYPES, NodeTypeValue } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
 import { executeWorkflow } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
+import { LayoutDashboard } from 'lucide-react';
 import './Editor.css';
 
 const Editor: React.FC = () => {
+    const history = useHistory();
     const [workflow, setWorkflow] = useState<Workflow>({
         id: `workflow_${Date.now()}`,
         name: 'New Workflow',
@@ -45,7 +48,7 @@ const Editor: React.FC = () => {
 
     const handleAddNode = (nodeType: string) => {
         let config: Record<string, any> = {};
-        
+
         // Set default configuration based on node type
         switch (nodeType) {
             case NODE_TYPES.WEBHOOK:
@@ -83,6 +86,35 @@ const Editor: React.FC = () => {
                     cc: '',
                     bcc: '',
                     attachments: [],
+                };
+                break;
+            case NODE_TYPES.EMAIL_DISCOVERY:
+                config = {
+                    urls: [],
+                    keywords: [],
+                    targetDomains: [],
+                    industry: '',
+                    maxEmails: 50,
+                };
+                break;
+            case NODE_TYPES.EMAIL_SENDING:
+                config = {
+                    recipient: '',
+                    subject: '',
+                    body: '',
+                    attachments: [],
+                };
+                break;
+            case NODE_TYPES.SCHEDULED_EMAIL:
+                config = {
+                    subject: '',
+                    body: '',
+                    recipients: '',
+                    recipientGroupId: '',
+                    scheduledDateTime: '',
+                    cronExpression: '',
+                    scheduleType: 'one-time',
+                    personalizationCSV: '',
                 };
                 break;
             case NODE_TYPES.WHATSAPP:
@@ -159,7 +191,11 @@ const Editor: React.FC = () => {
                     operation: 'read',
                     spreadsheetId: '',
                     sheetName: '',
-                    range: '',
+                    range: 'A:Z', // Default to all columns
+                    outputSpreadsheetId: '', // For writeToNewSheet
+                    outputTabName: '', // For appendToNewTab
+                    includeHeaders: true,
+                    formatForVisualization: true,
                 };
                 break;
             case NODE_TYPES.AIRTABLE:
@@ -199,6 +235,11 @@ const Editor: React.FC = () => {
                     code: '// Access input data with $input\nreturn $input;',
                 };
                 break;
+            case NODE_TYPES.DASHBOARD_PORTAL:
+                config = {
+                    defaultCategory: 'Tasks'
+                };
+                break;
             default:
                 config = {};
         }
@@ -221,6 +262,7 @@ const Editor: React.FC = () => {
     };
 
     const handleSaveWorkflow = async () => {
+        console.log('💾 Save button clicked!');
         setIsSaving(true);
         try {
             // Import required utilities dynamically
@@ -237,7 +279,7 @@ const Editor: React.FC = () => {
             if (response.webhooks && response.webhooks.length > 0) {
                 console.log('📍 Registered webhooks:');
                 response.webhooks.forEach((webhook) => {
-                    console.log(`   ${webhook.method} http://localhost:4000${webhook.path}`);
+                    console.log(`   ${webhook.method} http://localhost:5000${webhook.path}`);
                 });
             }
 
@@ -255,15 +297,25 @@ const Editor: React.FC = () => {
 
 
     const handleRunWorkflow = async () => {
+        console.log('🚀 Run button clicked!');
         try {
             console.clear();
-            console.log('🚀 Starting workflow execution...');
-            const testPayload = {
-                amount: 75000,
-                department: 'sales',
-                timestamp: new Date().toISOString(),
-            };
-            await executeWorkflow(workflow, testPayload);
+            console.log('🚀 Starting workflow execution via backend API...');
+
+            // Import API service
+            const { apiService } = await import('../services/api');
+
+            // Execute workflow through backend API (this will actually send emails!)
+            const result = await apiService.executeWorkflow(workflow);
+
+            if (result.status === 'success') {
+                console.log('✅ Workflow executed successfully!');
+                console.log('Results:', result.results);
+                alert('✅ Workflow executed successfully! Check console for details.');
+            } else {
+                console.error('❌ Workflow execution failed:', result.error);
+                alert(`❌ Workflow failed: ${result.error}`);
+            }
         } catch (error) {
             console.error('Workflow execution failed:', error);
             alert(`Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -415,6 +467,8 @@ const Editor: React.FC = () => {
                 </div>
 
                 <div className="editor-header-actions">
+
+
                     <div className="workflow-stats">
                         <span title={`Nodes: ${workflow.nodes.length}`}>🔧 {workflow.nodes.length}</span>
                         <span title={`Connections: ${workflow.edges.length}`}>🔗 {workflow.edges.length}</span>

@@ -2,21 +2,66 @@ import { Workflow as FrontendWorkflow } from '../types';
 import { Workflow as BackendWorkflow, WorkflowNodeData } from '../types/workflow';
 
 /**
+ * Map frontend node types (camelCase) to backend node types (SCREAMING_SNAKE_CASE)
+ */
+function mapNodeTypeToBackend(frontendType: string): string {
+    const typeMap: Record<string, string> = {
+        'webhook': 'webhook',
+        'schedule': 'schedule',
+        'javascript': 'javascript',
+        'conditional': 'conditional',
+        'delay': 'delay',
+        'http': 'http',
+        'slack': 'slack',
+        'email': 'email',
+        'emailDiscovery': 'EMAIL_DISCOVERY',
+        'emailSending': 'EMAIL_SENDING',
+        'scheduledEmail': 'SCHEDULED_EMAIL',
+        'whatsapp': 'whatsapp',
+        'telegram': 'telegram',
+        'discord': 'discord',
+        'googleSheets': 'googleSheets',
+        'airtable': 'airtable',
+        'notion': 'notion',
+        'openai': 'openai',
+        'mysql': 'mysql',
+        'postgres': 'postgres',
+        'set': 'set',
+        'filter': 'filter',
+        'merge': 'merge',
+        'splitBatches': 'splitBatches',
+    };
+
+    return typeMap[frontendType] || frontendType;
+}
+
+/**
  * Convert frontend Workflow format to backend format
  */
 export function toBackendWorkflow(frontendWorkflow: FrontendWorkflow): BackendWorkflow {
-    return {
-        id: frontendWorkflow.id || `workflow_${Date.now()}`,
-        nodes: frontendWorkflow.nodes.map((node): WorkflowNodeData => ({
+    const workflowId = frontendWorkflow.id || 'workflow_' + Date.now().toString();
+
+    const nodes = frontendWorkflow.nodes.map(function (node) {
+        const nodeData: any = {
             id: node.id,
-            type: node.type,
-            config: node.data?.config || {},
-        })),
-        edges: frontendWorkflow.edges.map((edge) => ({
+            type: mapNodeTypeToBackend(node.type),
+            config: node.data?.config || {}
+        };
+        return nodeData;
+    });
+
+    const edges = frontendWorkflow.edges.map(function (edge) {
+        return {
             source: edge.source,
             target: edge.target,
-            sourceHandle: edge.sourceHandle,
-        })),
+            sourceHandle: edge.sourceHandle
+        };
+    });
+
+    return {
+        id: workflowId,
+        nodes: nodes,
+        edges: edges
     };
 }
 
@@ -27,26 +72,40 @@ export function toFrontendWorkflow(
     backendWorkflow: BackendWorkflow,
     existingWorkflow?: FrontendWorkflow
 ): FrontendWorkflow {
-    return {
-        id: backendWorkflow.id || `workflow_${Date.now()}`,
-        name: existingWorkflow?.name || 'Imported Workflow',
-        description: existingWorkflow?.description || '',
-        nodes: backendWorkflow.nodes.map((node) => ({
+    const workflowId = backendWorkflow.id || 'workflow_' + Date.now().toString();
+    const workflowName = existingWorkflow?.name || 'Imported Workflow';
+    const workflowDesc = existingWorkflow?.description || '';
+    const createdTime = existingWorkflow?.createdAt || new Date().toISOString();
+    const updatedTime = new Date().toISOString();
+
+    const nodes = backendWorkflow.nodes.map(function (node) {
+        return {
             id: node.id,
             type: node.type,
             data: {
-                label: `${node.type} Node`,
-                config: node.config,
+                label: node.type + ' Node',
+                config: node.config
             },
-            position: { x: 100, y: 100 }, // Default position, can be improved
-        })),
-        edges: backendWorkflow.edges.map((edge, index) => ({
-            id: `edge-${index}`,
+            position: { x: 100, y: 100 }
+        };
+    });
+
+    const edges = backendWorkflow.edges.map(function (edge, index) {
+        return {
+            id: 'edge-' + index.toString(),
             source: edge.source,
             target: edge.target,
-            sourceHandle: edge.sourceHandle,
-        })),
-        createdAt: existingWorkflow?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+            sourceHandle: edge.sourceHandle
+        };
+    });
+
+    return {
+        id: workflowId,
+        name: workflowName,
+        description: workflowDesc,
+        nodes: nodes,
+        edges: edges,
+        createdAt: createdTime,
+        updatedAt: updatedTime
     };
 }

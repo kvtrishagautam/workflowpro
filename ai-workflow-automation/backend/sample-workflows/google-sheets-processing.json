@@ -1,0 +1,112 @@
+{
+  "id": "google-sheets-processing-workflow",
+  "name": "Google Sheets Data Processing",
+  "description": "Scheduled workflow that reads data from Google Sheets, cleans and filters it, then writes to a new tab",
+  "nodes": [
+    {
+      "id": "schedule_trigger_1",
+      "type": "SCHEDULE",
+      "data": {
+        "label": "Schedule Trigger",
+        "config": {
+          "mode": "cron",
+          "cronExpression": "0 */5 * * *",
+          "timezone": "UTC"
+        }
+      },
+      "position": { "x": 100, "y": 100 }
+    },
+    {
+      "id": "sheets_read_1",
+      "type": "GOOGLE_SHEETS",
+      "data": {
+        "label": "Read Input Data",
+        "config": {
+          "operation": "read",
+          "spreadsheetId": "YOUR_SPREADSHEET_ID_HERE",
+          "sheetName": "RawData",
+          "range": "A:F",
+          "includeHeaders": true
+        }
+      },
+      "position": { "x": 100, "y": 250 }
+    },
+    {
+      "id": "set_node_1",
+      "type": "SET",
+      "data": {
+        "label": "Clean Data",
+        "config": {
+          "fields": [
+            {
+              "name": "timestamp",
+              "value": "={{new Date().toISOString()}}",
+              "description": "Add processing timestamp"
+            }
+          ],
+          "keepOnlySet": false
+        }
+      },
+      "position": { "x": 100, "y": 400 }
+    },
+    {
+      "id": "filter_node_1",
+      "type": "FILTER",
+      "data": {
+        "label": "Filter Active Records",
+        "config": {
+          "conditions": [
+            {
+              "field": "status",
+              "operator": "equals",
+              "value": "active"
+            }
+          ],
+          "combineOperation": "all"
+        }
+      },
+      "position": { "x": 100, "y": 550 }
+    },
+    {
+      "id": "sheets_write_1",
+      "type": "GOOGLE_SHEETS",
+      "data": {
+        "label": "Write to Processed Tab",
+        "config": {
+          "operation": "appendToNewTab",
+          "spreadsheetId": "YOUR_SPREADSHEET_ID_HERE",
+          "sheetName": "RawData",
+          "range": "",
+          "outputTabName": "Processed_Data",
+          "includeHeaders": true,
+          "formatForVisualization": true
+        }
+      },
+      "position": { "x": 100, "y": 700 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "schedule_trigger_1",
+      "target": "sheets_read_1"
+    },
+    {
+      "id": "e2",
+      "source": "sheets_read_1",
+      "target": "set_node_1"
+    },
+    {
+      "id": "e3",
+      "source": "set_node_1",
+      "target": "filter_node_1"
+    },
+    {
+      "id": "e4",
+      "source": "filter_node_1",
+      "target": "sheets_write_1"
+    }
+  ],
+  "createdAt": "2026-02-16T09:16:28.000Z",
+  "updatedAt": "2026-02-16T09:16:28.000Z"
+}

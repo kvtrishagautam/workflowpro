@@ -1,6 +1,6 @@
 // API service for backend communication
 
-const BACKEND_URL = 'http://localhost:4000';
+const BACKEND_URL = 'http://localhost:5000';
 
 export interface SaveWorkflowResponse {
     status: string;
@@ -22,7 +22,7 @@ export class WorkflowAPI {
      * Save a workflow to the backend
      */
     static async saveWorkflow(workflow: any): Promise<SaveWorkflowResponse> {
-        const response = await fetch(`${BACKEND_URL}/workflows`, {
+        const response = await fetch(`${BACKEND_URL}/api/workflows`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -42,7 +42,7 @@ export class WorkflowAPI {
      * Get all workflows from the backend
      */
     static async getAllWorkflows(): Promise<any[]> {
-        const response = await fetch(`${BACKEND_URL}/workflows`);
+        const response = await fetch(`${BACKEND_URL}/api/workflows`);
 
         if (!response.ok) {
             throw new Error('Failed to fetch workflows');

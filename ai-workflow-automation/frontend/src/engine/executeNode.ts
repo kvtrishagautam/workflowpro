@@ -89,6 +89,15 @@ export async function executeNode(
                 outputData = { ...data, output: data };
                 break;
 
+            // Email automation nodes - these need backend execution
+            case 'emailDiscovery':
+            case 'emailSending':
+            case 'scheduledEmail':
+                console.log(`[${node.type.toUpperCase()}] This node requires backend execution`);
+                console.log(`[INFO] Skipping frontend execution for ${node.type} - will be handled by backend`);
+                outputData = data;
+                break;
+
             default:
                 console.warn(`[WARN] Unsupported node type: ${node.type}`);
                 outputData = data;

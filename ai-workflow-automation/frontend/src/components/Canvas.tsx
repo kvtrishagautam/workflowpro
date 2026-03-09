@@ -372,11 +372,10 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    pointerEvents: 'none',
                 }}
             >
                 {/* Nodes */}
-                <div className="nodes-layer" style={{ pointerEvents: 'auto' }}>
+                <div className="nodes-layer">
                     {workflow.nodes.map((node) => (
                         <WorkflowNode
                             key={node.id}
@@ -505,9 +504,8 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                                 />
                                 {/* Visible connection path */}
                                 <path
-                                    className={`connection ${
-                                        isSelected ? 'connection-selected' : isHovered ? 'connection-hover' : ''
-                                    }`}
+                                    className={`connection ${isSelected ? 'connection-selected' : isHovered ? 'connection-hover' : ''
+                                        }`}
                                     d={path}
                                     markerEnd={`url(#arrowhead${isSelected ? '-selected' : isHovered ? '-hover' : ''})`}
                                     style={{ pointerEvents: 'none' }}
@@ -590,11 +588,11 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} title="Zoom In">
                         +
                     </button>
-                    <button 
+                    <button
                         onClick={() => {
                             setZoom(1);
                             setPan({ x: 0, y: 0 });
-                        }} 
+                        }}
                         title="Reset View"
                         className="reset-view-btn"
                     >
@@ -602,7 +600,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     </button>
                 </div>
             </div>
-            
+
             {/* Canvas Info Overlay */}
             <div className="canvas-info">
                 <div className="info-item">
@@ -614,7 +612,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     <span className="info-value">{workflow.edges.length}</span>
                 </div>
             </div>
-            
+
             {/* Keyboard Shortcuts Hint */}
             <div className="canvas-hints">
                 <div className="hint-item">
