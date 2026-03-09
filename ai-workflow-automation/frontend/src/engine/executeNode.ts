@@ -85,8 +85,8 @@ export async function executeNode(
                 break;
 
             case 'webhook':
-                // Webhook is a trigger, just pass data through
-                outputData = data;
+                // Webhook is a trigger, pass data through with standardized output
+                outputData = { ...data, output: data };
                 break;
 
             default:
@@ -317,6 +317,7 @@ async function executeHTTP(node: NodeProps, data: any): Promise<any> {
 
         return {
             ...data,
+            output: proxyData.data, // ← Standardized output field
             http: {
                 statusCode: proxyData.status,
                 headers: proxyData.headers,
@@ -350,7 +351,12 @@ async function executeJavaScript(node: NodeProps, data: any): Promise<any> {
 
         console.log(`[JAVASCRIPT] Execution complete`);
 
-        return result !== undefined ? result : data;
+        const output = result !== undefined ? result : data;
+        // Add standardized output field if not already present
+        if (typeof output === 'object' && output !== null && !output.output) {
+            return { ...output, output };
+        }
+        return output;
     } catch (error) {
         console.error(`[JAVASCRIPT] Error:`, error);
         throw new Error(`JavaScript execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -368,6 +374,7 @@ async function executeSet(node: NodeProps, data: any): Promise<any> {
     console.log(`[SET] Setting ${fields.length} field(s)`);
 
     const result = { ...data };
+    const setFields: Record<string, any> = {};
 
     for (const field of fields) {
         const { name, value } = field;
@@ -375,11 +382,13 @@ async function executeSet(node: NodeProps, data: any): Promise<any> {
             // Replace variables in the value
             const processedValue = replaceVariables(value, data);
             setNestedProperty(result, name, processedValue);
+            setFields[name] = processedValue;
             console.log(`[SET] Set ${name} = ${processedValue}`);
         }
     }
 
-    return result;
+    // Add standardized output field containing the fields that were set
+    return { ...result, output: setFields };
 }
 
 /**
@@ -407,6 +416,7 @@ async function executeFilter(node: NodeProps, data: any): Promise<any> {
 
         return {
             ...data,
+            output: filtered, // ← Standardized output (filtered array)
             items: filtered,
         };
     }
@@ -419,7 +429,11 @@ async function executeFilter(node: NodeProps, data: any): Promise<any> {
 
     console.log(`[FILTER] Data ${matches ? 'passes' : 'fails'} filter`);
 
-    return matches === (mode === 'keep') ? data : null;
+    const result = matches === (mode === 'keep') ? data : null;
+    if (result) {
+        return { ...result, output: result }; // ← Standardized output (the data itself if it passes)
+    }
+    return result;
 }
 
 /**
@@ -480,6 +494,7 @@ async function executeSlack(node: NodeProps, data: any): Promise<any> {
         console.warn('[SLACK] No webhook URL configured - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             slack: {
                 status: 'simulated',
                 message,
@@ -495,10 +510,12 @@ async function executeSlack(node: NodeProps, data: any): Promise<any> {
             body: JSON.stringify({ text: message }),
         });
 
+        const success = response.ok;
         return {
             ...data,
+            output: { success, status: success ? 'sent' : 'failed' }, // ← Standardized output
             slack: {
-                status: response.ok ? 'sent' : 'failed',
+                status: success ? 'sent' : 'failed',
                 message,
                 timestamp: Date.now(),
             },
@@ -526,6 +543,7 @@ async function executeEmail(node: NodeProps, data: any): Promise<any> {
     // Simulate email send (in production, use nodemailer or similar)
     return {
         ...data,
+        output: { success: true, status: 'simulated' }, // ← Standardized output
         email: {
             status: 'simulated',
             to,
@@ -551,6 +569,7 @@ async function executeDiscord(node: NodeProps, data: any): Promise<any> {
         console.warn('[DISCORD] No webhook URL configured - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             discord: {
                 status: 'simulated',
                 message,
@@ -566,10 +585,12 @@ async function executeDiscord(node: NodeProps, data: any): Promise<any> {
             body: JSON.stringify({ content: message }),
         });
 
+        const success = response.ok;
         return {
             ...data,
+            output: { success, status: success ? 'sent' : 'failed' }, // ← Standardized output
             discord: {
-                status: response.ok ? 'sent' : 'failed',
+                status: success ? 'sent' : 'failed',
                 message,
                 timestamp: Date.now(),
             },
@@ -588,8 +609,8 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
     const message = replaceVariables(config.message || '', data);
     const chatId = config.chatId || '';
-    // Check both credentials.botToken (new format) and botToken (old format)
-    const botToken = config.credentials?.botToken || config.botToken || '';
+    // Check for telegramBotToken (credentials tab format) or botToken (old format)
+    const botToken = config.telegramBotToken || config.credentials?.botToken || config.botToken || '';
 
     console.log(`[TELEGRAM] Chat ID: ${chatId}`);
     console.log(`[TELEGRAM] Bot Token: ${botToken ? '***configured***' : 'MISSING'}`);
@@ -600,6 +621,7 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
         console.warn('[TELEGRAM] Missing bot token or chat ID - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             telegram: {
                 status: 'simulated',
                 message,
@@ -620,10 +642,12 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
             }),
         });
 
+        const success = response.ok;
         return {
             ...data,
+            output: { success, status: success ? 'sent' : 'failed' }, // ← Standardized output
             telegram: {
-                status: response.ok ? 'sent' : 'failed',
+                status: success ? 'sent' : 'failed',
                 message,
                 chatId,
                 timestamp: Date.now(),
@@ -655,6 +679,7 @@ async function executeWhatsApp(node: NodeProps, data: any): Promise<any> {
         console.warn('[WHATSAPP] Missing credentials (apiToken or phoneNumberId) - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             whatsapp: {
                 status: 'simulated',
                 operation,
@@ -784,6 +809,7 @@ async function executeWhatsApp(node: NodeProps, data: any): Promise<any> {
 
         return {
             ...data,
+            output: { success: true, status: 'sent', messageId: result.messages?.[0]?.id }, // ← Standardized output
             whatsapp: {
                 status: 'sent',
                 operation,
@@ -843,6 +869,7 @@ These developments represent significant shifts in the technology landscape that
 
         return {
             ...data,
+            output: simulatedResponse, // ← Standardized output field
             openai: {
                 status: 'simulated',
                 operation,
@@ -885,14 +912,17 @@ These developments represent significant shifts in the technology landscape that
                 throw new Error(`OpenAI API error: ${errorMessage}`);
             }
 
+            const aiResponse = result.choices[0]?.message?.content || '';
+
             return {
                 ...data,
+                output: aiResponse, // ← Standardized output field
                 openai: {
                     status: 'success',
                     operation,
                     systemPrompt,
                     userPrompt,
-                    response: result.choices[0]?.message?.content || '',
+                    response: aiResponse,
                     usage: result.usage,
                     timestamp: Date.now(),
                 },
@@ -927,6 +957,7 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
         console.warn('[GOOGLE_SHEETS] No access token configured - simulating operation');
         return {
             ...data,
+            output: operation === 'read' ? [] : { success: true, simulated: true }, // ← Standardized output
             googleSheets: {
                 status: 'simulated',
                 operation,
@@ -976,6 +1007,7 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
 
                 return {
                     ...data,
+                    output: { success: true, rowsAdded: result.updates?.updatedRows || 0 }, // ← Standardized output
                     googleSheets: {
                         status: 'success',
                         operation: 'append',
@@ -1013,6 +1045,7 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
 
                 return {
                     ...data,
+                    output: result.values || [], // ← Standardized output (array of rows)
                     googleSheets: {
                         status: 'success',
                         operation: 'read',
@@ -1055,6 +1088,7 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
 
                 return {
                     ...data,
+                    output: { success: true, rowsUpdated: result.updatedRows || 0 }, // ← Standardized output
                     googleSheets: {
                         status: 'success',
                         operation: 'update',

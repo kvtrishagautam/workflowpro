@@ -1,0 +1,92 @@
+{
+  "id": "workflow_1771299893576",
+  "nodes": [
+    {
+      "id": "node_1771299895195",
+      "type": "webhook",
+      "config": {
+        "path": "/form-submit",
+        "httpMethod": "POST",
+        "method": "POST",
+        "authentication": "none",
+        "responseMode": "immediately",
+        "responseCode": 200,
+        "responseData": "firstEntryJson",
+        "options": {
+          "allowedOrigins": "*",
+          "ignoreBots": false,
+          "rawBody": false,
+          "noResponseBody": false
+        }
+      }
+    },
+    {
+      "id": "node_1771299899944",
+      "type": "googleSheets",
+      "config": {
+        "operation": "append",
+        "spreadsheetId": "YOUR_GOOGLE_SPREADSHEET_ID",
+        "sheetName": "Sheet1",
+        "range": "A:E",
+        "accessToken": "YOUR_GOOGLE_OAUTH_ACCESS_TOKEN"
+      }
+    },
+    {
+      "id": "node_1771299902845",
+      "type": "openai",
+      "config": {
+        "model": "gemini-2.5-flash",
+        "operation": "chat",
+        "prompt": "",
+        "maxTokens": 1000,
+        "temperature": 0.7,
+        "openaiApiKey": "YOUR_GEMINI_API_KEY",
+        "userPrompt": " Analyze this business inquiry and provide:\n    1. Summary of the request\n    2. Urgency assessment (Low/Medium/High)\n    3. Recommended next action\n\n    Customer Details:\n    - Name: {{body.name}}\n    - Company: {{body.company}}\n    - Email: {{body.email}}\n    - Phone: {{body.phone}}\n\n    Inquiry:\n    - Category: {{body.category}}\n    - Budget: {{body.budget}}\n    - Urgency: {{body.urgency}}\n    - Message: {{body.message}}",
+        "systemPrompt": "You are a professional business analyst assistant.\n    Analyze customer inquiries and provide clear, actionable insights in a concise format.\n    Always structure your response with numbered points."
+      }
+    },
+    {
+      "id": "node_1771299908810",
+      "type": "set",
+      "config": {
+        "fields": [
+          {
+            "name": "formattedMessage",
+            "value": " NEW BUSINESS INQUIRY        \ud83d\udc64 Contact Details:       Name: {{body.name}}       Email: {{body.email}}       Phone: {{body.phone}}       Company: {{body.company}}        \ud83d\udccb Inquiry Details:       Type: {{body.category}}       Budget: {{body.budget}}       Urgency: {{body.urgency}}        \ud83d\udcac Message:       {{body.message}}                \ud83e\udd16 AI Analysis:       {{openai.response}}        \u23f0 Received: {{body.timestamp}}",
+            "type": "string"
+          }
+        ],
+        "keepOnlySet": false
+      }
+    },
+    {
+      "id": "node_1771299914868",
+      "type": "telegram",
+      "config": {
+        "to": "",
+        "message": "{{formattedMessage}}",
+        "parseMode": "text",
+        "telegramBotToken": "YOUR_TELEGRAM_BOT_TOKEN",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1771299895195",
+      "target": "node_1771299899944"
+    },
+    {
+      "source": "node_1771299902845",
+      "target": "node_1771299908810"
+    },
+    {
+      "source": "node_1771299908810",
+      "target": "node_1771299914868"
+    },
+    {
+      "source": "node_1771299899944",
+      "target": "node_1771299902845"
+    }
+  ]
+}
