@@ -89,7 +89,7 @@ async function runWorkflowTest() {
         console.log('\n🔗 To test the complete workflow including dashboard:');
         console.log('   Run: npm run dev');
         console.log('   Then visit: http://localhost:5000/dashboard');
-        
+
         process.exit(0);
 
     } catch (error) {

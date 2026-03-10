@@ -126,7 +126,7 @@ async function runDataVisualizationWorkflow() {
         console.log('   2. Connect to: mongodb://localhost:27017/workflow-automation');
         console.log('   3. Navigate to "analysisresults" collection');
         console.log(`   4. Look for document with datasetId: "${analysisResult.data.datasetId}"`);
-        
+
         process.exit(0);
 
     } catch (error) {

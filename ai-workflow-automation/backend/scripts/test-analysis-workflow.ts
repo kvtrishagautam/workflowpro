@@ -17,10 +17,10 @@ interface WorkflowTest {
 }
 
 const tests: WorkflowTest[] = [
-    { name: 'Sales Analytics',      csvFile: 'sales-data.csv',      categories: ['Sales'] },
-    { name: 'Task Management',      csvFile: 'tasks-data.csv',      categories: ['Tasks'] },
-    { name: 'Attendance Tracking',  csvFile: 'attendance-data.csv', categories: ['Attendance'] },
-    { name: 'Expense Analysis',     csvFile: 'expenses-data.csv',   categories: ['Expenses'] },
+    { name: 'Sales Analytics', csvFile: 'sales-data.csv', categories: ['Sales'] },
+    { name: 'Task Management', csvFile: 'tasks-data.csv', categories: ['Tasks'] },
+    { name: 'Attendance Tracking', csvFile: 'attendance-data.csv', categories: ['Attendance'] },
+    { name: 'Expense Analysis', csvFile: 'expenses-data.csv', categories: ['Expenses'] },
 ];
 
 function buildWorkflowPayload(csvData: string, categories: string[]) {
@@ -53,10 +53,10 @@ function buildWorkflowPayload(csvData: string, categories: string[]) {
             }
         ],
         edges: [
-            { source: 'csv-1',      target: 'cleaner-1' },
-            { source: 'cleaner-1',  target: 'analysis-1' },
+            { source: 'csv-1', target: 'cleaner-1' },
+            { source: 'cleaner-1', target: 'analysis-1' },
             { source: 'analysis-1', target: 'storage-1' },
-            { source: 'storage-1',  target: 'dashboard-1' }
+            { source: 'storage-1', target: 'dashboard-1' }
         ]
     };
 }
@@ -64,7 +64,7 @@ function buildWorkflowPayload(csvData: string, categories: string[]) {
 async function runTest(test: WorkflowTest) {
     const csvPath = path.join(__dirname, '..', 'test-data', test.csvFile);
     const csvData = fs.readFileSync(csvPath, 'utf-8');
-    
+
     console.log(`\n${'═'.repeat(60)}`);
     console.log(`  ${test.name.toUpperCase()}`);
     console.log(`  File: ${test.csvFile} | Categories: ${test.categories.join(', ')}`);
