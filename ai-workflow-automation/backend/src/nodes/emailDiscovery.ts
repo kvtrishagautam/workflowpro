@@ -642,28 +642,40 @@ export const emailDiscoveryNode: WorkflowNode = {
 
             // ── Save to MongoDB ────────────────────────────────────────────────
             let dbSaveCount = 0;
+            let dbSkipCount = 0;
             let dbErrors: string[] = [];
             try {
                 const savedEmails = await Promise.all(
                     limitedEmails.map(async (emailData) => {
                         try {
-                            const discoveredEmail = new DiscoveredEmail({
-                                email: emailData.email,
-                                source_url: emailData.source_url,
-                                matched_keyword: emailData.matched_keyword,
-                                industry: industry,
-                                confidence_score: emailData.confidence_score,
-                                status: 'pending',
-                                workflowRunId: workflowRunId || null,
-                            });
-                            await discoveredEmail.save();
-                            dbSaveCount++;
+                            // Use findOneAndUpdate with upsert to avoid duplicate emails
+                            const result = await DiscoveredEmail.findOneAndUpdate(
+                                { email: emailData.email },
+                                {
+                                    $setOnInsert: {
+                                        email: emailData.email,
+                                        source_url: emailData.source_url,
+                                        matched_keyword: emailData.matched_keyword,
+                                        industry: industry,
+                                        confidence_score: emailData.confidence_score,
+                                        status: 'pending',
+                                        workflowRunId: workflowRunId || null,
+                                    }
+                                },
+                                { upsert: true, new: true, includeResultMetadata: true }
+                            );
+                            if (result.lastErrorObject?.updatedExisting) {
+                                dbSkipCount++;
+                                console.log(`[EmailDiscovery] Skipped duplicate: ${emailData.email}`);
+                            } else {
+                                dbSaveCount++;
+                            }
                         } catch (dbErr: any) {
                             dbErrors.push(`Failed to save ${emailData.email}: ${dbErr.message}`);
                         }
                     })
                 );
-                console.log(`[EmailDiscovery] Saved ${dbSaveCount}/${limitedEmails.length} to database`);
+                console.log(`[EmailDiscovery] Saved ${dbSaveCount} new, skipped ${dbSkipCount} duplicates (of ${limitedEmails.length} total)`);
                 if (dbErrors.length > 0) {
                     warnings.push(...dbErrors);
                 }
@@ -672,6 +684,10 @@ export const emailDiscoveryNode: WorkflowNode = {
                 console.error(`[EmailDiscovery] ${msg}`);
                 warnings.push(msg);
             }
+
+            console.log(`[EmailDiscovery] ━━━ Output Summary ━━━`);
+            console.log(`[EmailDiscovery] Returning ${limitedEmails.length} emails to pipeline`);
+            limitedEmails.forEach((e, i) => console.log(`[EmailDiscovery]   ${i + 1}. ${e.email} (confidence: ${e.confidence_score})`));
 
             return {
                 status: 'success',

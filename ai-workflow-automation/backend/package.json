@@ -7,9 +7,12 @@
     "scripts": {
         "build": "tsc",
         "start": "node dist/server.js",
-        "dev": "ts-node src/server.ts",
+        "dev": "ts-node src/index.ts",
         "dev:index": "ts-node src/index.ts",
-        "test:custom": "ts-node scripts/test-email-workflow.ts"
+        "test:custom": "ts-node scripts/test-email-workflow.ts",
+        "setup:mongodb": "ts-node scripts/setup-mongodb.ts",
+        "test:workflow": "ts-node scripts/test-data-workflow.ts",
+        "test:simple": "ts-node scripts/simple-workflow-test.ts"
     },
     "keywords": [
         "workflow",

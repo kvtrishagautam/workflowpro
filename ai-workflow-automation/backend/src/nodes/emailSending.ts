@@ -106,16 +106,24 @@ export const emailSendingNode: WorkflowNode = {
     },
     execute: async (input: NodeInput): Promise<NodeExecutionResult> => {
         try {
-            console.log('[EmailSending] Starting execution...');
-            console.log('[EmailSending] Input received:', JSON.stringify({
-                ...input,
+            console.log('[EmailSending] ━━━ Starting execution ━━━');
+            console.log('[EmailSending] Input keys:', Object.keys(input));
+            console.log('[EmailSending] Input details:', JSON.stringify({
+                recipient: input.recipient || '(none)',
+                emailsCount: Array.isArray(input.emails) ? input.emails.length : '(no emails array)',
+                subject: input.subject || '(MISSING)',
+                bodyLength: input.body ? input.body.length : '(MISSING)',
+                hasSmtpConfig: !!input.smtpConfig,
                 smtpConfig: input.smtpConfig ? { ...input.smtpConfig, pass: '***' } : undefined
             }, null, 2));
 
             const { recipient, emails, subject, body, attachments, smtpConfig } = input;
 
             if (!subject || !body) {
-                throw new Error('Missing required inputs: subject or body.');
+                console.error('[EmailSending] ❌ Missing subject or body!');
+                console.error('[EmailSending]   subject:', subject ? `"${subject}"` : 'UNDEFINED');
+                console.error('[EmailSending]   body:', body ? `(${body.length} chars)` : 'UNDEFINED');
+                throw new Error('Missing required inputs: subject or body. Make sure these are configured in the Email Sending node.');
             }
 
             // Determine recipients: direct input OR from discovery node output

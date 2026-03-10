@@ -212,12 +212,32 @@ app.post('/api/workflows/execute', async (req, res) => {
                 return res.status(400).json({ error: `Unknown node type: ${nodeConfig.type}` });
             }
 
-            // Merge previous output with current input
-            // Note: In a more complex graph, we'd merge outputs from all predecessors
-            const input = { ...nodeConfig.input, ...previousOutput };
+            // Merge: previous node output provides data context, node's own input (config) takes priority
+            // This ensures the node's configured subject/body/etc are NOT overwritten by upstream data
+            const input = { ...previousOutput, ...nodeConfig.input };
 
-            console.log(`Executing node: ${node.name} (${nodeId})`);
+            console.log(`\n━━━ Executing node: ${node.name} (${nodeId}) ━━━`);
+            console.log(`[Pipeline] Node type: ${nodeConfig.type}`);
+            console.log(`[Pipeline] Node own input keys: [${Object.keys(nodeConfig.input || {}).join(', ')}]`);
+            console.log(`[Pipeline] Previous output keys: [${Object.keys(previousOutput).join(', ')}]`);
+            console.log(`[Pipeline] Merged input keys: [${Object.keys(input).join(', ')}]`);
+
+            // Log specific data relevant to email workflow tracing
+            if (input.emails) {
+                console.log(`[Pipeline] emails array length: ${Array.isArray(input.emails) ? input.emails.length : 'NOT_ARRAY'}`);
+            }
+            if (input.subject) {
+                console.log(`[Pipeline] subject: "${input.subject}"`);
+            }
+
             const result = await node.execute(input);
+
+            console.log(`[Pipeline] Result status: ${result.status}`);
+            if (result.status === 'error') {
+                console.error(`[Pipeline] ❌ Error: ${result.error}`);
+            } else {
+                console.log(`[Pipeline] Output keys: [${Object.keys(result.data || {}).join(', ')}]`);
+            }
 
             results.push({
                 nodeId: nodeConfig.id || node.id,

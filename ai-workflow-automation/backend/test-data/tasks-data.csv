@@ -1,0 +1,26 @@
+Task ID,Task Name,Status,Owner,Priority,Project,Sprint,Estimated Hours,Due Date
+T001,Design login page,Completed,Aisha Khan,High,Portal Revamp,Sprint 1,8,2026-01-10
+T002,Setup CI/CD pipeline,In Progress,Rahul Verma,High,DevOps,Sprint 1,12,2026-01-12
+T003,Write unit tests for auth,Not Started,Neha Gupta,Medium,Portal Revamp,Sprint 1,6,2026-01-14
+T004,Database schema migration,Completed,Vikram Singh,High,Backend Core,Sprint 1,10,2026-01-08
+T005,Create dashboard wireframe,Completed,Aisha Khan,Medium,Portal Revamp,Sprint 1,5,2026-01-09
+T006,Implement search API,In Progress,Rahul Verma,High,Backend Core,Sprint 2,14,2026-01-20
+T007,Fix payment gateway bug,Completed,Neha Gupta,Critical,Payments,Sprint 1,4,2026-01-07
+T008,Setup monitoring alerts,Not Started,Vikram Singh,Medium,DevOps,Sprint 2,8,2026-01-22
+T009,Refactor user service,In Progress,Aisha Khan,Low,Backend Core,Sprint 2,16,2026-01-25
+T010,Mobile responsive layout,Not Started,Rahul Verma,Medium,Portal Revamp,Sprint 2,10,2026-01-28
+T011,API rate limiting,Completed,Neha Gupta,High,Backend Core,Sprint 2,6,2026-01-18
+T012,Load testing script,Not Started,Vikram Singh,Low,DevOps,Sprint 3,8,2026-02-01
+T013,Notification system,In Progress,Aisha Khan,High,Portal Revamp,Sprint 2,12,2026-01-30
+T014,Optimize DB queries,Completed,Rahul Verma,Medium,Backend Core,Sprint 2,5,2026-01-20
+T015,SSL certificate renewal,Completed,Neha Gupta,Critical,DevOps,Sprint 1,2,2026-01-06
+T016,User analytics module,Not Started,Vikram Singh,Medium,Portal Revamp,Sprint 3,14,2026-02-05
+T017,Error logging service,In Progress,Aisha Khan,High,Backend Core,Sprint 3,8,2026-02-03
+T018,Backup automation,Not Started,Rahul Verma,Medium,DevOps,Sprint 3,6,2026-02-07
+T019,Payment reconciliation,In Progress,Neha Gupta,High,Payments,Sprint 2,10,2026-01-26
+T020,Code review guidelines doc,Completed,Vikram Singh,Low,DevOps,Sprint 1,3,2026-01-11
+T021,Implement caching layer,Not Started,Aisha Khan,High,Backend Core,Sprint 3,12,2026-02-10
+T022,Integration test suite,In Progress,Rahul Verma,Medium,Backend Core,Sprint 3,10,2026-02-08
+T023,Migrate to TypeScript,Not Started,Neha Gupta,Low,Portal Revamp,Sprint 3,20,2026-02-15
+T024,Setup staging environment,Completed,Vikram Singh,High,DevOps,Sprint 2,8,2026-01-22
+T025,Invoice generation API,In Progress,Aisha Khan,High,Payments,Sprint 3,14,2026-02-12
