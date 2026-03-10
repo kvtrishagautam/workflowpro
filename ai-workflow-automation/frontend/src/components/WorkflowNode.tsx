@@ -154,8 +154,12 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
 
         switch (node.type) {
             case NODE_TYPES.SCHEDULE:
-                if (config.interval) summary.push({ label: 'Interval', value: `${config.interval} ${config.unit || 'minutes'}` });
+                // Support both old (interval/unit) and new (intervalValue/intervalUnit) config keys
+                const intervalVal = config.intervalValue || config.interval;
+                const intervalUnit = config.intervalUnit || config.unit || 'minutes';
+                if (intervalVal) summary.push({ label: 'Interval', value: `${intervalVal} ${intervalUnit}` });
                 if (config.cronExpression) summary.push({ label: 'Cron', value: config.cronExpression });
+                if (config.mode) summary.push({ label: 'Mode', value: config.mode });
                 break;
             case NODE_TYPES.EMAIL:
                 if (config.to) summary.push({ label: 'To', value: config.to.substring(0, 25) });
@@ -379,12 +383,13 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                     onConnectorMouseUp(e, node.id, 'input');
                 }}
             />
-            {/* For conditional nodes, render two branch output handles (true/false) */}
+            {/* Conditional nodes have TRUE (right) / FALSE (bottom) outputs */}
             {node.type === NODE_TYPES.CONDITIONAL ? (
                 <>
                     <div
-                        className="node-connector output-connector branch-true"
-                        title="True branch"
+                        className="node-connector output-connector true-connector"
+                        title="TRUE"
+                        data-output-type="true"
                         onMouseDown={(e) => {
                             e.stopPropagation();
                             onConnectorMouseDown(e, node.id, 'output', 'true');
@@ -393,10 +398,13 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                             e.stopPropagation();
                             onConnectorMouseUp(e, node.id, 'output', 'true');
                         }}
-                    />
+                    >
+                        <span className="connector-label">✓</span>
+                    </div>
                     <div
-                        className="node-connector output-connector branch-false"
-                        title="False branch"
+                        className="node-connector output-connector false-connector"
+                        title="FALSE"
+                        data-output-type="false"
                         onMouseDown={(e) => {
                             e.stopPropagation();
                             onConnectorMouseDown(e, node.id, 'output', 'false');
@@ -405,7 +413,9 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                             e.stopPropagation();
                             onConnectorMouseUp(e, node.id, 'output', 'false');
                         }}
-                    />
+                    >
+                        <span className="connector-label">✗</span>
+                    </div>
                 </>
             ) : (
                 <div

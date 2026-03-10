@@ -315,6 +315,7 @@ router.post('/workflows', authenticate, async (req: AuthRequest, res: Response) 
         if (webhookNodes.length > 0) {
             console.log('📍 Registered webhook endpoints:');
             webhookNodes.forEach((node: any) => {
+                // Support both React Flow structure (node.data.config) and direct structure (node.config)
                 const config = node.data?.config || node.config || {};
                 const method = config.httpMethod || config.method || 'POST';
                 const path = config.path || '/webhook';

@@ -85,7 +85,16 @@ export async function executeNode(
                 break;
 
             case 'webhook':
-                // Webhook is a trigger, just pass data through
+                // Webhook is a trigger, pass data through with standardized output
+                outputData = { ...data, output: data };
+                break;
+
+            // Email automation nodes - these need backend execution
+            case 'emailDiscovery':
+            case 'emailSending':
+            case 'scheduledEmail':
+                console.log(`[${node.type.toUpperCase()}] This node requires backend execution`);
+                console.log(`[INFO] Skipping frontend execution for ${node.type} - will be handled by backend`);
                 outputData = data;
                 break;
 
@@ -113,35 +122,63 @@ async function executeConditional(
     nodeMap: Map<string, NodeProps>,
     run: WorkflowRun
 ): Promise<void> {
-    const cfg = node.data.config || {};
-
-    // Support both simple and expression-based conditions as configured in the UI
+    const config = node.data.config || {};
     let result = false;
 
-    if (cfg.conditionType === 'expression' && cfg.expression) {
+    // Support expression-based conditions
+    if (config.conditionType === 'expression' && config.expression) {
         try {
-            // Evaluate expression with `data` in scope. Expression should return truthy/falsey.
-            // Example: data.count > 10 && data.status === 'active'
-            // eslint-disable-next-line no-new-func
-            const fn = new Function('data', `return (${cfg.expression});`);
-            result = Boolean(fn(data));
-        } catch (err) {
-            console.warn(`[WARN] Conditional node ${node.id} expression error:`, err);
+            console.log(`[CONDITIONAL] Evaluating expression: ${config.expression}`);
+
+            // Replace dot notation variables (e.g., openai.output -> data.openai.output)
+            let expression = config.expression;
+            const varMatches = expression.match(/\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)\b(?!\s*\()/g);
+
+            if (varMatches) {
+                const uniqueVars: string[] = [...new Set<string>(varMatches)];
+                uniqueVars.forEach((varPath: string) => {
+                    const parts = varPath.split('.');
+                    let value = data;
+                    for (const part of parts) {
+                        value = value?.[part];
+                    }
+                    const replacementValue = value !== undefined ? JSON.stringify(value) : '""';
+                    expression = expression.replace(
+                        new RegExp(varPath.replace(/\./g, '\\.'), 'g'),
+                        replacementValue
+                    );
+                });
+            }
+
+            // eslint-disable-next-line no-eval
+            result = eval(expression);
+        } catch (error) {
+            console.error(`[CONDITIONAL] Error evaluating expression:`, error);
             result = false;
         }
-    } else {
-        // Simple condition: use field/operator/value from config
-        const field = cfg.field || '';
-        const operator = cfg.operator || 'equals';
-        const compareValue = cfg.value;
-
+    }
+    // Support rule-based conditions (old format)
+    else if (config.rule) {
+        result = evaluateCondition(config.rule, data);
+    }
+    // Support conditions array
+    else if (config.conditions && Array.isArray(config.conditions)) {
+        const combineOp = config.combineOperation || 'all';
+        const results = config.conditions.map((condition: any) => evaluateCondition(condition, data));
+        result = combineOp === 'all' ? results.every(r => r) : results.some(r => r);
+    }
+    else {
+        // Fallback to simple condition fields
+        const field = config.field || '';
+        const operator = config.operator || 'equals';
+        const compareValue = config.value;
         const left = getNestedProperty(data, field);
         result = evaluateSimpleCondition(left, operator, compareValue);
     }
 
     console.log(`[CONDITIONAL] Node ${node.id}: evaluated to ${result}`);
 
-    // Log the conditional evaluation as a step in the run
+    // Log the conditional evaluation (newbr style)
     const condLog: NodeRunLog = {
         nodeId: node.id,
         nodeType: node.type,
@@ -154,12 +191,13 @@ async function executeConditional(
     run.logs.push(condLog);
     updateRun(run);
 
+
     const edge = workflow.edges.find(
         (e) => e.source === node.id && e.sourceHandle === (result ? 'true' : 'false')
     );
 
     if (!edge) {
-        console.log(`[INFO] No edge found for ${result ? 'true' : 'false'} branch`);
+        console.log(`[INFO] No edge found for ${result ? 'true' : 'false'} branch, ending workflow`);
         return;
     }
 
@@ -253,31 +291,38 @@ async function executeHTTP(node: NodeProps, data: any): Promise<any> {
     console.log(`[HTTP] Making ${method} request to ${url}`);
 
     try {
-        const options: RequestInit = {
-            method,
+        // Use backend proxy to avoid CORS issues
+        const proxyResponse = await fetch('http://localhost:4000/api/proxy', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...headers,
             },
-        };
+            body: JSON.stringify({
+                url,
+                method,
+                headers,
+                body: body && method !== 'GET'
+                    ? (typeof body === 'string' ? replaceVariables(body, data) : body)
+                    : undefined,
+            }),
+        });
 
-        if (body && method !== 'GET') {
-            options.body = typeof body === 'string'
-                ? replaceVariables(body, data)
-                : JSON.stringify(body);
+        const proxyData = await proxyResponse.json();
+
+        if (!proxyResponse.ok) {
+            throw new Error(proxyData.message || 'Proxy request failed');
         }
 
-        const response = await fetch(url, options);
-        const responseData = await response.json();
-
-        console.log(`[HTTP] Response status: ${response.status}`);
+        console.log(`[HTTP] Response status: ${proxyData.status}`);
 
         return {
             ...data,
+            output: proxyData.data, // ← Standardized output field
             http: {
-                statusCode: response.status,
-                headers: Object.fromEntries(response.headers.entries()),
-                body: responseData,
+                statusCode: proxyData.status,
+                headers: proxyData.headers,
+                body: proxyData.data,
+                response: proxyData.data, // Also include as 'response' for easier access
             },
         };
     } catch (error) {
@@ -306,7 +351,12 @@ async function executeJavaScript(node: NodeProps, data: any): Promise<any> {
 
         console.log(`[JAVASCRIPT] Execution complete`);
 
-        return result !== undefined ? result : data;
+        const output = result !== undefined ? result : data;
+        // Add standardized output field if not already present
+        if (typeof output === 'object' && output !== null && !output.output) {
+            return { ...output, output };
+        }
+        return output;
     } catch (error) {
         console.error(`[JAVASCRIPT] Error:`, error);
         throw new Error(`JavaScript execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -324,6 +374,7 @@ async function executeSet(node: NodeProps, data: any): Promise<any> {
     console.log(`[SET] Setting ${fields.length} field(s)`);
 
     const result = { ...data };
+    const setFields: Record<string, any> = {};
 
     for (const field of fields) {
         const { name, value } = field;
@@ -331,11 +382,13 @@ async function executeSet(node: NodeProps, data: any): Promise<any> {
             // Replace variables in the value
             const processedValue = replaceVariables(value, data);
             setNestedProperty(result, name, processedValue);
+            setFields[name] = processedValue;
             console.log(`[SET] Set ${name} = ${processedValue}`);
         }
     }
 
-    return result;
+    // Add standardized output field containing the fields that were set
+    return { ...result, output: setFields };
 }
 
 /**
@@ -363,6 +416,7 @@ async function executeFilter(node: NodeProps, data: any): Promise<any> {
 
         return {
             ...data,
+            output: filtered, // ← Standardized output (filtered array)
             items: filtered,
         };
     }
@@ -375,7 +429,11 @@ async function executeFilter(node: NodeProps, data: any): Promise<any> {
 
     console.log(`[FILTER] Data ${matches ? 'passes' : 'fails'} filter`);
 
-    return matches === (mode === 'keep') ? data : null;
+    const result = matches === (mode === 'keep') ? data : null;
+    if (result) {
+        return { ...result, output: result }; // ← Standardized output (the data itself if it passes)
+    }
+    return result;
 }
 
 /**
@@ -436,6 +494,7 @@ async function executeSlack(node: NodeProps, data: any): Promise<any> {
         console.warn('[SLACK] No webhook URL configured - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             slack: {
                 status: 'simulated',
                 message,
@@ -451,10 +510,12 @@ async function executeSlack(node: NodeProps, data: any): Promise<any> {
             body: JSON.stringify({ text: message }),
         });
 
+        const success = response.ok;
         return {
             ...data,
+            output: { success, status: success ? 'sent' : 'failed' }, // ← Standardized output
             slack: {
-                status: response.ok ? 'sent' : 'failed',
+                status: success ? 'sent' : 'failed',
                 message,
                 timestamp: Date.now(),
             },
@@ -482,6 +543,7 @@ async function executeEmail(node: NodeProps, data: any): Promise<any> {
     // Simulate email send (in production, use nodemailer or similar)
     return {
         ...data,
+        output: { success: true, status: 'simulated' }, // ← Standardized output
         email: {
             status: 'simulated',
             to,
@@ -507,6 +569,7 @@ async function executeDiscord(node: NodeProps, data: any): Promise<any> {
         console.warn('[DISCORD] No webhook URL configured - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             discord: {
                 status: 'simulated',
                 message,
@@ -522,10 +585,12 @@ async function executeDiscord(node: NodeProps, data: any): Promise<any> {
             body: JSON.stringify({ content: message }),
         });
 
+        const success = response.ok;
         return {
             ...data,
+            output: { success, status: success ? 'sent' : 'failed' }, // ← Standardized output
             discord: {
-                status: response.ok ? 'sent' : 'failed',
+                status: success ? 'sent' : 'failed',
                 message,
                 timestamp: Date.now(),
             },
@@ -544,15 +609,19 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
     const message = replaceVariables(config.message || '', data);
     const chatId = config.chatId || '';
-    const botToken = config.botToken || '';
+    // Check for telegramBotToken (credentials tab format) or botToken (old format)
+    const botToken = config.telegramBotToken || config.credentials?.botToken || config.botToken || '';
 
-    console.log(`[TELEGRAM] Sending message to chat ${chatId}`);
-    console.log(`[TELEGRAM] Message: ${message}`);
+    console.log(`[TELEGRAM] Chat ID: ${chatId}`);
+    console.log(`[TELEGRAM] Bot Token: ${botToken ? '***configured***' : 'MISSING'}`);
+    console.log(`[TELEGRAM] Has credentials object:`, !!config.credentials);
+    console.log(`[TELEGRAM] Message: ${message.substring(0, 100)}...`);
 
     if (!botToken || !chatId) {
         console.warn('[TELEGRAM] Missing bot token or chat ID - simulating send');
         return {
             ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
             telegram: {
                 status: 'simulated',
                 message,
@@ -573,10 +642,12 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
             }),
         });
 
+        const success = response.ok;
         return {
             ...data,
+            output: { success, status: success ? 'sent' : 'failed' }, // ← Standardized output
             telegram: {
-                status: response.ok ? 'sent' : 'failed',
+                status: success ? 'sent' : 'failed',
                 message,
                 chatId,
                 timestamp: Date.now(),
@@ -594,22 +665,164 @@ async function executeTelegram(node: NodeProps, data: any): Promise<any> {
  */
 async function executeWhatsApp(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
+    const operation = config.operation || 'sendMessage';
+    const phoneNumber = replaceVariables(config.phoneNumber || config.to || '', data);
     const message = replaceVariables(config.message || '', data);
-    const to = config.to || '';
 
-    console.log(`[WHATSAPP] Sending message to ${to}`);
-    console.log(`[WHATSAPP] Message: ${message}`);
+    // Get credentials
+    const apiToken = config.apiToken || '';
+    const phoneNumberId = config.phoneNumberId || '';
 
-    // Simulate WhatsApp send (requires WhatsApp Business API credentials)
-    return {
-        ...data,
-        whatsapp: {
-            status: 'simulated',
-            message,
-            to,
-            timestamp: Date.now(),
-        },
-    };
+    console.log(`[WHATSAPP] Operation: ${operation}, To: ${phoneNumber}`);
+
+    if (!apiToken || !phoneNumberId) {
+        console.warn('[WHATSAPP] Missing credentials (apiToken or phoneNumberId) - simulating send');
+        return {
+            ...data,
+            output: { success: true, status: 'simulated' }, // ← Standardized output
+            whatsapp: {
+                status: 'simulated',
+                operation,
+                message,
+                to: phoneNumber,
+                info: 'Configure API token and Phone Number ID in credentials to use real WhatsApp API',
+                timestamp: Date.now(),
+            },
+        };
+    }
+
+    if (!phoneNumber) {
+        throw new Error('WhatsApp phone number is required');
+    }
+
+    // Normalize phone number (remove non-numeric characters except +)
+    const normalizedPhone = phoneNumber.replace(/[^0-9+]/g, '').replace(/^\+/, '');
+
+    console.log(`[WHATSAPP] Normalized phone: ${normalizedPhone}`);
+
+    try {
+        const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+
+        let requestBody: any;
+
+        switch (operation) {
+            case 'sendMessage': {
+                if (!message) {
+                    throw new Error('Message content is required for sendMessage operation');
+                }
+
+                requestBody = {
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to: normalizedPhone,
+                    type: 'text',
+                    text: {
+                        preview_url: false,
+                        body: message
+                    }
+                };
+                break;
+            }
+
+            case 'sendTemplate': {
+                const templateName = config.templateName || 'hello_world';
+                const templateLanguage = config.templateLanguage || 'en';
+                const templateParams = config.templateParams || {};
+
+                console.log(`[WHATSAPP] Using template: ${templateName}`);
+
+                requestBody = {
+                    messaging_product: 'whatsapp',
+                    to: normalizedPhone,
+                    type: 'template',
+                    template: {
+                        name: templateName,
+                        language: {
+                            code: templateLanguage
+                        },
+                        components: Object.keys(templateParams).length > 0 ? [
+                            {
+                                type: 'body',
+                                parameters: Object.values(templateParams).map((val: any) => ({
+                                    type: 'text',
+                                    text: replaceVariables(String(val), data)
+                                }))
+                            }
+                        ] : []
+                    }
+                };
+                break;
+            }
+
+            case 'sendMedia': {
+                const mediaType = config.mediaType || 'image';
+                const mediaUrl = replaceVariables(config.mediaUrl || '', data);
+                const caption = replaceVariables(config.caption || '', data);
+
+                if (!mediaUrl) {
+                    throw new Error('Media URL is required for sendMedia operation');
+                }
+
+                console.log(`[WHATSAPP] Sending ${mediaType}: ${mediaUrl}`);
+
+                const mediaField: any = {
+                    link: mediaUrl
+                };
+
+                // Only add caption if provided and media type supports it
+                if (caption && ['image', 'video', 'document'].includes(mediaType)) {
+                    mediaField.caption = caption;
+                }
+
+                requestBody = {
+                    messaging_product: 'whatsapp',
+                    to: normalizedPhone,
+                    type: mediaType,
+                    [mediaType]: mediaField
+                };
+                break;
+            }
+
+            default:
+                throw new Error(`Unsupported WhatsApp operation: ${operation}`);
+        }
+
+        console.log(`[WHATSAPP] Sending request to WhatsApp API...`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = result.error?.message || result.error?.error_data?.details || response.statusText;
+            throw new Error(`WhatsApp API error: ${errorMessage}`);
+        }
+
+        console.log(`[WHATSAPP] Message sent successfully, ID: ${result.messages?.[0]?.id}`);
+
+        return {
+            ...data,
+            output: { success: true, status: 'sent', messageId: result.messages?.[0]?.id }, // ← Standardized output
+            whatsapp: {
+                status: 'sent',
+                operation,
+                message,
+                to: phoneNumber,
+                messageId: result.messages?.[0]?.id,
+                timestamp: Date.now(),
+            },
+        };
+    } catch (error) {
+        console.error('[WHATSAPP] Error:', error);
+        throw new Error(`WhatsApp send failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 }
 
 /**
@@ -620,25 +833,49 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
     const operation = config.operation || 'chat';
     const apiKey = config.apiKey || '';
-    const prompt = replaceVariables(config.prompt || '', data);
+
+    // Support both new format (systemPrompt + userPrompt) and old format (prompt)
+    const systemPrompt = config.systemPrompt || '';
+    const userPrompt = replaceVariables(config.userPrompt || config.prompt || '', data);
 
     console.log(`[OPENAI] Operation: ${operation}`);
-    console.log(`[OPENAI] Prompt: ${prompt}`);
+    if (systemPrompt) {
+        console.log(`[OPENAI] System Prompt: ${systemPrompt.substring(0, 100)}...`);
+    }
+    console.log(`[OPENAI] User Prompt: ${userPrompt.substring(0, 100)}...`);
 
     if (!apiKey) {
         console.warn('[OPENAI] No API key configured - simulating response');
+        // Create a realistic simulated response that matches the expected format
+        const simulatedResponse = `1. Importance Level: HIGH
+
+2. Quick Summary
+Major technology announcements and breaking developments in the tech industry. Multiple significant stories covering innovation, product launches, and industry-changing news.
+
+3. Top Headlines
+• Revolutionary AI breakthrough announced
+• Major tech company launches new product line
+• Industry leader announces strategic partnership
+
+4. Key Trends
+- Artificial Intelligence advancement
+- Cloud computing expansion
+- Cybersecurity innovations
+
+5. Why This Matters
+These developments represent significant shifts in the technology landscape that will impact businesses and consumers. The announcements signal major industry changes and innovation acceleration.
+
+🤖 [Simulated Response - Configure API key for real analysis]`;
+
         return {
             ...data,
+            output: simulatedResponse, // ← Standardized output field
             openai: {
                 status: 'simulated',
                 operation,
-                prompt,
-                response: JSON.stringify({
-                    score: 85,
-                    summary: 'This is a high-potential VIP lead from a known enterprise company.',
-                    analysis: 'Excellent fit for enterprise plan based on company size and budget.'
-                }),
-                usage: { prompt_tokens: 50, completion_tokens: 20, total_tokens: 70 },
+                systemPrompt,
+                userPrompt,
+                response: simulatedResponse,
                 timestamp: Date.now(),
             },
             // Also merge the parsed response into data for easy access in subsequent nodes
@@ -649,6 +886,15 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
 
     try {
         if (operation === 'chat') {
+            // Build messages array with optional system message
+            const messages: Array<{ role: string; content: string }> = [];
+
+            if (systemPrompt) {
+                messages.push({ role: 'system', content: systemPrompt });
+            }
+
+            messages.push({ role: 'user', content: userPrompt });
+
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -657,20 +903,29 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
                 },
                 body: JSON.stringify({
                     model: config.model || 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: prompt }],
+                    messages,
                     temperature: config.temperature || 0.7,
                 }),
             });
 
             const result = await response.json();
 
+            if (!response.ok) {
+                const errorMessage = result.error?.message || response.statusText;
+                throw new Error(`OpenAI API error: ${errorMessage}`);
+            }
+
+            const aiResponse = result.choices[0]?.message?.content || '';
+
             return {
                 ...data,
+                output: aiResponse, // ← Standardized output field
                 openai: {
                     status: 'success',
                     operation,
-                    prompt,
-                    response: result.choices[0]?.message?.content || '',
+                    systemPrompt,
+                    userPrompt,
+                    response: aiResponse,
                     usage: result.usage,
                     timestamp: Date.now(),
                 },
@@ -690,25 +945,211 @@ async function executeOpenAI(node: NodeProps, data: any): Promise<any> {
  */
 async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
     const config = node.data.config || {};
-    const operation = config.operation || 'read';
+    const operation = config.operation || 'append';
     const spreadsheetId = config.spreadsheetId || '';
-    const range = config.range || 'Sheet1!A1:Z100';
+    const sheetName = config.sheetName || 'Sheet1';
+    const range = config.range || 'A:Z';
+
+    // Get access token from credentials tab
+    const accessToken = config.accessToken || '';
 
     console.log(`[GOOGLE_SHEETS] Operation: ${operation}`);
-    console.log(`[GOOGLE_SHEETS] Spreadsheet: ${spreadsheetId}, Range: ${range}`);
+    console.log(`[GOOGLE_SHEETS] Spreadsheet: ${spreadsheetId}, Sheet: ${sheetName}`);
 
-    // Simulate Google Sheets operation (requires Google API credentials)
-    return {
-        ...data,
-        googleSheets: {
-            status: 'simulated',
-            operation,
-            spreadsheetId,
-            range,
-            data: operation === 'read' ? [['Header1', 'Header2'], ['Value1', 'Value2']] : null,
-            timestamp: Date.now(),
-        },
-    };
+    if (!accessToken) {
+        console.warn('[GOOGLE_SHEETS] No access token configured - simulating operation');
+        return {
+            ...data,
+            output: operation === 'read' ? [] : { success: true, simulated: true }, // ← Standardized output
+            googleSheets: {
+                status: 'simulated',
+                operation,
+                spreadsheetId,
+                sheetName,
+                message: 'Configure access token in credentials to use real Google Sheets API',
+                timestamp: Date.now(),
+            },
+        };
+    }
+
+    if (!spreadsheetId) {
+        throw new Error('Google Sheets spreadsheet ID is required');
+    }
+
+    const baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+    try {
+        switch (operation) {
+            case 'append': {
+                // Prepare values - extract from data or use configured values
+                const values = config.values || extractRowFromData(data);
+
+                console.log(`[GOOGLE_SHEETS] Appending row:`, values);
+
+                const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}:append?valueInputOption=USER_ENTERED`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [values]
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Google Sheets API error: ${error.error?.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log(`[GOOGLE_SHEETS] Successfully appended ${result.updates?.updatedRows || 0} rows`);
+
+                return {
+                    ...data,
+                    output: { success: true, rowsAdded: result.updates?.updatedRows || 0 }, // ← Standardized output
+                    googleSheets: {
+                        status: 'success',
+                        operation: 'append',
+                        spreadsheetId,
+                        sheetName,
+                        updatedRange: result.updates?.updatedRange,
+                        updatedRows: result.updates?.updatedRows,
+                        updatedColumns: result.updates?.updatedColumns,
+                        updatedCells: result.updates?.updatedCells,
+                        timestamp: Date.now(),
+                    }
+                };
+            }
+
+            case 'read': {
+                const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}`;
+
+                console.log(`[GOOGLE_SHEETS] Reading range: ${sheetName}!${range}`);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Google Sheets API error: ${error.error?.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log(`[GOOGLE_SHEETS] Successfully read ${result.values?.length || 0} rows`);
+
+                return {
+                    ...data,
+                    output: result.values || [], // ← Standardized output (array of rows)
+                    googleSheets: {
+                        status: 'success',
+                        operation: 'read',
+                        spreadsheetId,
+                        sheetName,
+                        values: result.values || [],
+                        range: result.range,
+                        rowCount: result.values?.length || 0,
+                        timestamp: Date.now(),
+                    }
+                };
+            }
+
+            case 'update': {
+                const values = config.values || extractRowFromData(data);
+
+                console.log(`[GOOGLE_SHEETS] Updating range: ${sheetName}!${range}`);
+
+                const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}?valueInputOption=USER_ENTERED`;
+
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [values]
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Google Sheets API error: ${error.error?.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log(`[GOOGLE_SHEETS] Successfully updated ${result.updatedRows || 0} rows`);
+
+                return {
+                    ...data,
+                    output: { success: true, rowsUpdated: result.updatedRows || 0 }, // ← Standardized output
+                    googleSheets: {
+                        status: 'success',
+                        operation: 'update',
+                        spreadsheetId,
+                        sheetName,
+                        updatedRange: result.updatedRange,
+                        updatedRows: result.updatedRows,
+                        updatedColumns: result.updatedColumns,
+                        updatedCells: result.updatedCells,
+                        timestamp: Date.now(),
+                    }
+                };
+            }
+
+            default:
+                throw new Error(`Unsupported Google Sheets operation: ${operation}`);
+        }
+    } catch (error) {
+        console.error('[GOOGLE_SHEETS] Error:', error);
+        throw new Error(`Google Sheets operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+/**
+ * Helper: Extract row data from workflow data for Google Sheets
+ */
+function extractRowFromData(data: any): any[] {
+    // If values are explicitly provided, use them
+    if (data.values && Array.isArray(data.values)) {
+        return data.values;
+    }
+
+    // Try to extract from webhook body
+    if (data.body && typeof data.body === 'object') {
+        const bodyValues = Object.values(data.body);
+        if (bodyValues.length > 0) {
+            return bodyValues;
+        }
+    }
+
+    // Try to extract from query params
+    if (data.query && typeof data.query === 'object') {
+        const queryValues = Object.values(data.query);
+        if (queryValues.length > 0) {
+            return queryValues;
+        }
+    }
+
+    // Extract from root level, excluding internal fields
+    const excludeKeys = ['googleSheets', 'openai', 'telegram', 'whatsapp', 'slack', 'discord', 'email', 'http', 'headers', 'params', 'method', 'path'];
+    const keys = Object.keys(data).filter(k => !excludeKeys.includes(k));
+
+    if (keys.length > 0) {
+        return keys.map(k => data[k]);
+    }
+
+    // Fallback: return empty array
+    return [];
 }
 
 // ============================================
@@ -723,7 +1164,14 @@ function replaceVariables(template: string, data: any): string {
 
     return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
         const value = getNestedProperty(data, path.trim());
-        return value !== undefined ? String(value) : match;
+        if (value === undefined) return match;
+
+        // Properly handle objects and arrays
+        if (typeof value === 'object') {
+            return JSON.stringify(value, null, 2);
+        }
+
+        return String(value);
     });
 }
 

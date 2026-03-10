@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import Canvas from '../components/Canvas';
 import NodePalette from '../components/NodePalette';
 import RunHistory from '../components/RunHistory';
 import WebhookConfigPanel from '../components/WebhookConfigPanel';
 import NodeConfigPanel from '../components/NodeConfigPanel';
-import { Workflow, NodeProps, NODE_TYPES } from '../types';
+import { Workflow, NodeProps, NODE_TYPES, NodeTypeValue } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
 import { executeWorkflow } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
 import Modal from '../components/Modal';
+import { LayoutDashboard } from 'lucide-react';
 import './Editor.css';
 
 const Editor: React.FC = () => {
+    const history = useHistory();
     const [workflow, setWorkflow] = useState<Workflow>({
         id: `workflow_${Date.now()}`,
         name: 'New Workflow',
@@ -108,6 +111,35 @@ const Editor: React.FC = () => {
                     attachments: [],
                 };
                 break;
+            case NODE_TYPES.EMAIL_DISCOVERY:
+                config = {
+                    urls: [],
+                    keywords: [],
+                    targetDomains: [],
+                    industry: '',
+                    maxEmails: 50,
+                };
+                break;
+            case NODE_TYPES.EMAIL_SENDING:
+                config = {
+                    recipient: '',
+                    subject: '',
+                    body: '',
+                    attachments: [],
+                };
+                break;
+            case NODE_TYPES.SCHEDULED_EMAIL:
+                config = {
+                    subject: '',
+                    body: '',
+                    recipients: '',
+                    recipientGroupId: '',
+                    scheduledDateTime: '',
+                    cronExpression: '',
+                    scheduleType: 'one-time',
+                    personalizationCSV: '',
+                };
+                break;
             case NODE_TYPES.WHATSAPP:
             case NODE_TYPES.TELEGRAM:
                 config = {
@@ -184,7 +216,11 @@ const Editor: React.FC = () => {
                     operation: 'read',
                     spreadsheetId: '',
                     sheetName: '',
-                    range: '',
+                    range: 'A:Z', // Default to all columns
+                    outputSpreadsheetId: '', // For writeToNewSheet
+                    outputTabName: '', // For appendToNewTab
+                    includeHeaders: true,
+                    formatForVisualization: true,
                 };
                 break;
             case NODE_TYPES.AIRTABLE:
@@ -222,6 +258,11 @@ const Editor: React.FC = () => {
             case NODE_TYPES.JAVASCRIPT:
                 config = {
                     code: '// Access input data with $input\nreturn $input;',
+                };
+                break;
+            case NODE_TYPES.DASHBOARD_PORTAL:
+                config = {
+                    defaultCategory: 'Tasks'
                 };
                 break;
             default:
@@ -287,6 +328,7 @@ const Editor: React.FC = () => {
     };
 
     const handleSaveWorkflow = async () => {
+        console.log('💾 Save button clicked!');
         setIsSaving(true);
         try {
             // Import required utilities dynamically
@@ -377,17 +419,17 @@ const Editor: React.FC = () => {
 
 
     const handleRunWorkflow = async () => {
+        console.log('🚀 Run button clicked!');
         try {
             console.clear();
             console.log('🚀 Starting workflow execution...');
             const testPayload = {
-                amount: 75000,
+                amount: 1500,
                 department: 'sales',
+                customerName: 'Test User',
                 timestamp: new Date().toISOString(),
             };
             await executeWorkflow(workflow, testPayload);
-            // executeWorkflow might not return a result here as it likely logs to console or updates history
-            // showModal is skipped here as executeWorkflow handles its own UI updates or we can add success modal here if needed
         } catch (error) {
             console.error('Workflow execution failed:', error);
             showModal('Execution Failed', `Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');

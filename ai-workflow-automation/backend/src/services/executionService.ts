@@ -38,9 +38,27 @@ export async function executeWorkflow(
         JSON.stringify(payload, null, 2)
     );
 
+    // Log webhook context if provided (from origin/merge)
+    if (context) {
+        console.log(`📋 Webhook context:`, {
+            method: context.request.method,
+            path: context.request.path,
+            ip: context.request.ip,
+            authentication: context.webhookConfig.authentication,
+            responseMode: context.webhookConfig.responseMode,
+        });
+    }
+
+    const webhookNode = workflow.nodes.find(node => node.type === 'webhook');
+    if (webhookNode) {
+        const config = (webhookNode as any).data?.config || (webhookNode as any).config || {};
+        const method = config.httpMethod || config.method || 'POST';
+        console.log(`✅ Webhook triggered: ${config.path} [${method}]`);
+    }
+
     // Create execution record
     const execution = new WorkflowExecution({
-        workflowId: workflow._id || workflow.id, // Prefer MongoDB _id if available
+        workflowId: workflow._id || workflow.id,
         status: 'running',
         startedAt: new Date(),
         logs: [],
@@ -51,15 +69,12 @@ export async function executeWorkflow(
         await execution.save();
     } catch (saveError) {
         console.error('Failed to create execution record:', saveError);
-        // Continue execution even if saving fails initially? 
-        // Or fail? Let's log and proceed but we won't be able to update logs later without an ID.
     }
 
     const results: Record<string, any> = {};
     const executionLogs: any[] = [];
 
     try {
-        // Convert WorkflowNodeData to WorkflowNode (adapting types)
         // Convert WorkflowNodeData to WorkflowNode (adapting types)
         const nodes: WorkflowNode[] = workflow.nodes.map(n => ({
             id: n.id,
@@ -80,13 +95,13 @@ export async function executeWorkflow(
             targetHandle: (e as any).targetHandle
         })) : [];
 
-        // Sort nodes
+        // Sort nodes topologically
         const sortedNodes = topologicalSort(nodes, edges);
 
         // Initial output from trigger
         let previousOutput = payload;
 
-        // Execute nodes
+        // Execute nodes in order
         const skippedNodes = new Set<string>();
 
         for (const node of sortedNodes) {
@@ -99,7 +114,7 @@ export async function executeWorkflow(
                     result: { success: true, data: null, skipped: true },
                     message: 'Skipped due to condition'
                 });
-                // Propagate skip to children (Recursive Skip)
+                // Propagate skip to children
                 const childEdges = edges.filter(e => e.source === node.id);
                 childEdges.forEach(e => {
                     console.log(`⏭️ cascading skip to child node: ${e.target}`);
@@ -112,7 +127,7 @@ export async function executeWorkflow(
 
             const executionContext: ExecutionContext = {
                 workflowId: workflow.id,
-                executionId: execution._id.toString(), // Use actual DB ID
+                executionId: execution._id.toString(),
                 data: {
                     ...node.data,
                     config: node.data.config || {}
@@ -122,7 +137,6 @@ export async function executeWorkflow(
 
             let result: ExecutionResult;
 
-            // Execute based on type
             switch (node.type) {
                 case 'slack':
                     result = await slackExecutor.execute(executionContext);
@@ -165,7 +179,6 @@ export async function executeWorkflow(
                     result = { success: true, data: payload };
                     break;
                 default:
-                    // Placeholder for other nodes
                     result = { success: true, data: previousOutput };
                     break;
             }
@@ -174,21 +187,19 @@ export async function executeWorkflow(
                 nodeId: node.id,
                 timestamp: new Date(),
                 message: result.success ? 'Node executed successfully' : 'Node execution failed',
-                data: result.data, // May want to truncate if too large
+                data: result.data,
                 level: result.success ? 'info' : 'error',
-                type: node.type // Add type for clarity
+                type: node.type
             };
 
             executionLogs.push({
                 ...logEntry,
-                success: result.success, // Keep compatibility with local logs
+                success: result.success,
                 result: result,
                 outputHandle: result.outputHandle
             });
 
-            // Update DB execution logs
             execution.logs.push(logEntry as any);
-            // Optional: await execution.save(); // Save progressively if needed, but might be slow
 
             if (!result.success) {
                 console.error(`❌ Node ${node.id} failed:`, result.error);
@@ -202,14 +213,10 @@ export async function executeWorkflow(
             if (result.outputHandle) {
                 const currentNodeId = node.id;
                 const outputHandle = result.outputHandle;
-
-                // Find edges starting from this node
                 const outgoingEdges = edges.filter(e => e.source === currentNodeId);
 
-                // Identify nodes to skip (connected to OTHER handles)
                 outgoingEdges.forEach(edge => {
                     console.log(`🔍 Checking edge ${edge.id}: sourceHandle=${edge.sourceHandle} vs outputHandle=${outputHandle}`);
-                    // If edge has a handle and it DOESN'T match the output handle, skip the target
                     if (edge.sourceHandle && edge.sourceHandle !== outputHandle) {
                         console.log(`🚫 Skipping target node ${edge.target} because handle mismatch`);
                         skippedNodes.add(edge.target);
@@ -223,20 +230,37 @@ export async function executeWorkflow(
         // Mark execution as completed
         execution.status = 'completed';
         execution.completedAt = new Date();
-        execution.outputData = previousOutput; // Final output
+        execution.outputData = previousOutput;
         execution.result = results;
 
         await execution.save();
 
-        return {
+        const executionResult: any = {
             status: 'success',
             workflowId: workflow.id,
+            executedAt: new Date().toISOString(),
+            executedNodes: sortedNodes.length,
             results,
             logs: executionLogs
         };
 
+        // Include webhook-specific data if context available
+        if (context) {
+            executionResult.webhookData = {
+                method: context.request.method,
+                path: context.request.path,
+                query: context.request.query,
+                headers: {
+                    'content-type': context.request.headers['content-type'],
+                    'user-agent': context.request.headers['user-agent'],
+                },
+                body: context.request.body,
+            };
+        }
+
+        return executionResult;
+
     } catch (error: any) {
-        // Mark execution as failed
         execution.status = 'failed';
         execution.error = error.message;
         execution.completedAt = new Date();

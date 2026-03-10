@@ -1,0 +1,83 @@
+{
+  "id": "email-discovery-test-workflow",
+  "name": "Email Discovery — Test All Features",
+  "description": "Tests all Email Discovery node capabilities: direct URL scraping, keyword search via DuckDuckGo, industry filter, and domain filtering",
+  "nodes": [
+    {
+      "id": "test_1_direct_urls",
+      "type": "EMAIL_DISCOVERY",
+      "data": {
+        "label": "Test 1: Direct URL Scraping",
+        "config": {
+          "urls": [
+            "https://www.mozilla.org/en-US/contact/",
+            "https://www.apache.org/foundation/contact.html",
+            "https://www.ietf.org/contact/"
+          ],
+          "maxEmails": 10
+        }
+      },
+      "position": { "x": 100, "y": 100 }
+    },
+    {
+      "id": "test_2_keywords",
+      "type": "EMAIL_DISCOVERY",
+      "data": {
+        "label": "Test 2: Keyword Search (DuckDuckGo)",
+        "config": {
+          "keywords": ["open source", "developer"],
+          "industry": "technology",
+          "maxEmails": 15
+        }
+      },
+      "position": { "x": 500, "y": 100 }
+    },
+    {
+      "id": "test_3_industry_only",
+      "type": "EMAIL_DISCOVERY",
+      "data": {
+        "label": "Test 3: Industry Only (NGO)",
+        "config": {
+          "industry": "ngo",
+          "maxEmails": 10
+        }
+      },
+      "position": { "x": 900, "y": 100 }
+    },
+    {
+      "id": "test_4_domain_filter",
+      "type": "EMAIL_DISCOVERY",
+      "data": {
+        "label": "Test 4: With Domain Filter",
+        "config": {
+          "urls": [
+            "https://www.linuxfoundation.org/about/contact",
+            "https://about.gitlab.com/company/contact/"
+          ],
+          "targetDomains": ["linuxfoundation.org"],
+          "maxEmails": 5
+        }
+      },
+      "position": { "x": 100, "y": 350 }
+    },
+    {
+      "id": "test_5_combined",
+      "type": "EMAIL_DISCOVERY",
+      "data": {
+        "label": "Test 5: Combined (URLs + Keywords + Industry)",
+        "config": {
+          "urls": [
+            "https://www.w3.org/Consortium/contact"
+          ],
+          "keywords": ["web standards", "consortium"],
+          "industry": "technology",
+          "maxEmails": 20
+        }
+      },
+      "position": { "x": 500, "y": 350 }
+    }
+  ],
+  "edges": [],
+  "createdAt": "2026-03-08T17:22:00.000Z",
+  "updatedAt": "2026-03-08T17:22:00.000Z"
+}

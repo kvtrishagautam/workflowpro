@@ -19,6 +19,9 @@ export type NodeTypeValue =
     | 'delay'
     | 'schedule'
     | 'email'
+    | 'emailDiscovery'
+    | 'emailSending'
+    | 'scheduledEmail'
     | 'whatsapp'
     | 'telegram'
     | 'googleSheets'
@@ -31,7 +34,12 @@ export type NodeTypeValue =
     | 'notion'
     | 'openai'
     | 'mysql'
-    | 'postgres';
+    | 'postgres'
+    | 'csvRead'
+    | 'dataCleaner'
+    | 'analysisEngine'
+    | 'mongoDbStorage'
+    | 'dashboardPortal';
 
 export interface NodeProps {
     id: string;
@@ -81,6 +89,9 @@ export const NODE_TYPES = {
     // Communication
     SLACK: 'slack',
     EMAIL: 'email',
+    EMAIL_DISCOVERY: 'emailDiscovery',
+    EMAIL_SENDING: 'emailSending',
+    SCHEDULED_EMAIL: 'scheduledEmail',
     WHATSAPP: 'whatsapp',
     TELEGRAM: 'telegram',
     DISCORD: 'discord',
@@ -91,10 +102,18 @@ export const NODE_TYPES = {
     NOTION: 'notion',
     MYSQL: 'mysql',
     POSTGRES: 'postgres',
+    CSV_READ: 'csvRead',
+    MDB_STORAGE: 'mongoDbStorage',
+
+    // Analysis
+    DATA_CLEANER: 'dataCleaner',
+    ANALYSIS_ENGINE: 'analysisEngine',
+    DASHBOARD_PORTAL: 'dashboardPortal',
 
     // AI
     OPENAI: 'openai',
 };
+
 
 // Node configuration interface
 export interface NodeConfig {
@@ -113,7 +132,8 @@ export type NodeCategory =
     | 'communication'
     | 'data'
     | 'ai'
-    | 'http';
+    | 'http'
+    | 'analysis';
 
 // ============================================
 // Node-specific configuration interfaces

@@ -1,0 +1,116 @@
+{
+  "id": "workflow_1771297038700",
+  "nodes": [
+    {
+      "id": "schedule-1",
+      "type": "schedule",
+      "config": {
+        "mode": "interval",
+        "quickInterval": "1hour",
+        "intervalValue": 1,
+        "intervalUnit": "hours"
+      }
+    },
+    {
+      "id": "http-1",
+      "type": "http",
+      "config": {
+        "method": "GET",
+        "url": "https://newsapi.org/v2/top-headlines?country=us&category=technology&pageSize=5&apiKey=YOUR_NEWS_API_KEY",
+        "headers": "{}",
+        "timeout": 30000
+      }
+    },
+    {
+      "id": "filter-1",
+      "type": "filter",
+      "config": {
+        "combineConditions": "AND",
+        "conditions": [
+          {
+            "field": "http.response.totalResults",
+            "operator": "greaterThan",
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "openai-1",
+      "type": "openai",
+      "config": {
+        "operation": "chat",
+        "model": "gemini-2.5-flash",
+        "systemPrompt": "You are a professional news analyst specializing in technology. Analyze news articles to help users stay informed about important developments. Always provide clear, structured analysis with importance ratings.",
+        "userPrompt": "Analyze these latest technology news articles:\n\n{{http.response.articles}}\n\nProvide:\n1. Importance Level: [HIGH/MEDIUM/LOW]\n2. Quick Summary (2-3 sentences)\n3. Top Headlines\n4. Key Trends\n5. Why This Matters\n\nOnly rate as HIGH if it's truly significant (major announcements, breaking developments, industry-changing news).",
+        "maxTokens": 1000,
+        "temperature": 0.7,
+        "openaiApiKey": "YOUR_GEMINI_API_KEY"
+      }
+    },
+    {
+      "id": "if-1",
+      "type": "conditional",
+      "config": {
+        "conditionType": "expression",
+        "expression": "openai.response.includes('Importance Level: HIGH')"
+      }
+    },
+    {
+      "id": "telegram-1",
+      "type": "telegram",
+      "config": {
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "message": "\ud83d\udcf0 TECH NEWS ALERT\n\n{{openai.response}}\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83e\udd16 Automated by Workflow System\n\u23f0 {{http.response.articles[0].publishedAt}}",
+        "parseMode": "HTML",
+        "credentials": {
+          "botToken": "YOUR_TELEGRAM_BOT_TOKEN"
+        },
+        "telegramBotToken": "YOUR_TELEGRAM_BOT_TOKEN"
+      }
+    },
+    {
+      "id": "sheets-1",
+      "type": "googleSheets",
+      "config": {
+        "operation": "append",
+        "spreadsheetId": "YOUR_GOOGLE_SPREADSHEET_ID",
+        "sheetName": "Sheet1",
+        "range": "A:E",
+        "credentials": {
+          "accessToken": ""
+        },
+        "accessToken": "YOUR_GOOGLE_OAUTH_ACCESS_TOKEN"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "schedule-1",
+      "target": "http-1"
+    },
+    {
+      "source": "http-1",
+      "target": "filter-1"
+    },
+    {
+      "source": "filter-1",
+      "target": "openai-1"
+    },
+    {
+      "source": "openai-1",
+      "target": "if-1"
+    },
+    {
+      "source": "if-1",
+      "target": "telegram-1",
+      "sourceHandle": "true"
+    },
+    {
+      "source": "if-1",
+      "target": "sheets-1",
+      "sourceHandle": "false"
+    }
+  ]
+}

@@ -189,8 +189,19 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
             if (!node) return;
 
             const nodeDims = getNodeDimensions(nodeId);
-            const x = node.position.x + nodeDims.width / 2;
-            const y = node.position.y + nodeDims.height;
+
+            // Position based on connector type for conditional nodes
+            let x, y;
+            if (node.type === 'conditional' && handle === 'true') {
+                // TRUE connector on right side
+                x = node.position.x + nodeDims.width;
+                y = node.position.y + nodeDims.height / 2;
+            } else {
+                // Standard or FALSE connector at bottom
+                x = node.position.x + nodeDims.width / 2;
+                y = node.position.y + nodeDims.height;
+            }
+
             setConnectionEnd({ x, y });
         }
     };
@@ -210,11 +221,8 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     id: `edge_${Date.now()}`,
                     source: connectionStart.nodeId,
                     target: nodeId,
+                    sourceHandle: connectionStart.handle,
                 };
-
-                if (connectionStart.handle) {
-                    newEdge.sourceHandle = connectionStart.handle;
-                }
 
                 const updated = {
                     ...workflow,
@@ -421,11 +429,10 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    pointerEvents: 'none',
                 }}
             >
                 {/* Nodes */}
-                <div className="nodes-layer" style={{ pointerEvents: 'auto' }}>
+                <div className="nodes-layer">
                     {workflow.nodes.map((node) => (
                         <WorkflowNode
                             key={node.id}
@@ -507,15 +514,13 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         const targetDims = getNodeDimensions(targetNode.id);
 
                         // Calculate connection points
-                        // For conditional nodes with handles, use the specific handle position
+                        // Handle conditional nodes: TRUE connector on right side, FALSE at bottom
                         let x1, y1;
-                        if (sourceNode.type === 'conditional' && edge.sourceHandle) {
-                            // True handle is at 70%, False handle is at 30%
-                            const handleOffset = edge.sourceHandle === 'true' ? 0.7 : 0.3;
-                            x1 = sourceNode.position.x + (sourceDims.width * handleOffset);
-                            y1 = sourceNode.position.y + sourceDims.height;
+                        if (sourceNode.type === 'conditional' && edge.sourceHandle === 'true') {
+                            // TRUE connector is on the right side
+                            x1 = sourceNode.position.x + sourceDims.width;
+                            y1 = sourceNode.position.y + sourceDims.height / 2;
                         } else {
-                            // Default: output connector at bottom center
                             x1 = sourceNode.position.x + sourceDims.width / 2;
                             y1 = sourceNode.position.y + sourceDims.height;
                         }
@@ -589,11 +594,10 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
                         // Calculate start position based on handle type
                         let x1, y1;
-                        if (sourceNode.type === 'conditional' && connectionStart.handle) {
-                            // True handle is at 70%, False handle is at 30%
-                            const handleOffset = connectionStart.handle === 'true' ? 0.7 : 0.3;
-                            x1 = sourceNode.position.x + (sourceDims.width * handleOffset);
-                            y1 = sourceNode.position.y + sourceDims.height;
+                        if (sourceNode.type === 'conditional' && connectionStart.handle === 'true') {
+                            // TRUE connector on right side
+                            x1 = sourceNode.position.x + sourceDims.width;
+                            y1 = sourceNode.position.y + sourceDims.height / 2;
                         } else {
                             x1 = sourceNode.position.x + sourceDims.width / 2;
                             y1 = sourceNode.position.y + sourceDims.height;

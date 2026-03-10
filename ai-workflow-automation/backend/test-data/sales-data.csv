@@ -1,0 +1,31 @@
+Order ID,Product,Category,Region,SalesPerson,Amount,Date,Quantity
+S001,Wireless Headphones,Electronics,North,Ravi Sharma,4500,2026-01-03,3
+S002,Running Shoes,Footwear,South,Priya Menon,3200,2026-01-05,2
+S003,Laptop Stand,Accessories,West,Amit Patel,1800,2026-01-07,5
+S004,Bluetooth Speaker,Electronics,East,Sneha Iyer,2700,2026-01-09,4
+S005,Cotton T-Shirt,Apparel,North,Ravi Sharma,800,2026-01-12,10
+S006,Yoga Mat,Fitness,South,Priya Menon,1500,2026-01-14,6
+S007,USB-C Hub,Accessories,West,Deepak Joshi,2200,2026-01-16,3
+S008,Smart Watch,Electronics,North,Sneha Iyer,8500,2026-01-19,2
+S009,Trail Shoes,Footwear,East,Amit Patel,4100,2026-01-21,3
+S010,Protein Powder,Fitness,South,Deepak Joshi,2300,2026-01-23,8
+S011,Mechanical Keyboard,Electronics,West,Ravi Sharma,3600,2026-01-25,4
+S012,Denim Jacket,Apparel,North,Priya Menon,2800,2026-01-28,5
+S013,Monitor Arm,Accessories,East,Amit Patel,1900,2026-02-01,7
+S014,Noise Cancelling Earbuds,Electronics,South,Sneha Iyer,5200,2026-02-03,3
+S015,Formal Shoes,Footwear,West,Deepak Joshi,3800,2026-02-06,2
+S016,Resistance Bands,Fitness,North,Ravi Sharma,600,2026-02-08,15
+S017,Webcam HD,Electronics,East,Priya Menon,2100,2026-02-10,4
+S018,Polo Shirt,Apparel,South,Amit Patel,1200,2026-02-13,8
+S019,Laptop Bag,Accessories,West,Sneha Iyer,1700,2026-02-15,6
+S020,Fitness Tracker,Electronics,North,Deepak Joshi,4800,2026-02-18,3
+S021,Hiking Boots,Footwear,East,Ravi Sharma,5500,2026-02-20,2
+S022,Dumbbells Set,Fitness,South,Priya Menon,3500,2026-02-22,4
+S023,Wireless Mouse,Electronics,West,Amit Patel,900,2026-02-24,12
+S024,Winter Jacket,Apparel,North,Sneha Iyer,4200,2026-02-27,3
+S025,Phone Stand,Accessories,East,Deepak Joshi,450,2026-03-01,20
+S026,Gaming Headset,Electronics,South,Ravi Sharma,6200,2026-03-03,2
+S027,Slip-On Loafers,Footwear,West,Priya Menon,2600,2026-03-05,5
+S028,Kettlebell,Fitness,North,Amit Patel,1800,2026-03-07,6
+S029,Hoodie,Apparel,East,Sneha Iyer,1500,2026-03-09,7
+S030,Power Bank,Electronics,South,Deepak Joshi,1400,2026-03-10,9

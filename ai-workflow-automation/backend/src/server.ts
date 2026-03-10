@@ -4,8 +4,15 @@ import bodyParser from 'body-parser';
 import webhookRoutes from './routes/webhookRoutes';
 import authRoutes from './routes/auth.routes';
 import { connectDatabase } from './config/database';
-
 import { config } from './config/env';
+
+// Import proxyRoutes if available (from origin/merge); gracefully skip if not present
+let proxyRoutes: any = null;
+try {
+    proxyRoutes = require('./routes/proxyRoutes').default;
+} catch {
+    // proxyRoutes not available in this environment
+}
 
 const app = express();
 const PORT = config.port;
@@ -26,6 +33,11 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 // Mount API routes under /api to match frontend client baseURL
 app.use('/api', webhookRoutes);
+
+// Mount proxy routes if available
+if (proxyRoutes) {
+    app.use(proxyRoutes);
+}
 
 // 404 handler
 app.use((req, res) => {

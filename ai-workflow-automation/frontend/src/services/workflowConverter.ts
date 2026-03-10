@@ -2,6 +2,45 @@ import { Workflow as FrontendWorkflow } from '../types';
 import { Workflow as BackendWorkflow, WorkflowNodeData } from '../types/workflow';
 
 /**
+ * Map frontend node types (camelCase) to backend node types
+ */
+function mapNodeTypeToBackend(frontendType: string): string {
+    const typeMap: Record<string, string> = {
+        'webhook': 'webhook',
+        'schedule': 'schedule',
+        'javascript': 'javascript',
+        'conditional': 'conditional',
+        'delay': 'delay',
+        'http': 'http',
+        'slack': 'slack',
+        'email': 'email',
+        'emailDiscovery': 'EMAIL_DISCOVERY',
+        'emailSending': 'EMAIL_SENDING',
+        'scheduledEmail': 'SCHEDULED_EMAIL',
+        'whatsapp': 'whatsapp',
+        'telegram': 'telegram',
+        'discord': 'discord',
+        'googleSheets': 'googleSheets',
+        'airtable': 'airtable',
+        'notion': 'notion',
+        'openai': 'openai',
+        'mysql': 'mysql',
+        'postgres': 'postgres',
+        'set': 'set',
+        'filter': 'filter',
+        'merge': 'merge',
+        'splitBatches': 'splitBatches',
+        'csvRead': 'csvRead',
+        'dataCleaner': 'dataCleaner',
+        'analysisEngine': 'analysisEngine',
+        'mongoDbStorage': 'mongoDbStorage',
+        'dashboardPortal': 'dashboardPortal',
+    };
+
+    return typeMap[frontendType] || frontendType;
+}
+
+/**
  * Convert frontend Workflow format to backend format
  */
 export function toBackendWorkflow(frontendWorkflow: FrontendWorkflow): BackendWorkflow {
@@ -11,7 +50,7 @@ export function toBackendWorkflow(frontendWorkflow: FrontendWorkflow): BackendWo
         description: frontendWorkflow.description,
         nodes: frontendWorkflow.nodes.map((node) => ({
             id: node.id,
-            type: node.type,
+            type: mapNodeTypeToBackend(node.type) as WorkflowNodeData['type'],
             position: node.position,
             config: node.data.config || {},
             data: {
@@ -23,7 +62,7 @@ export function toBackendWorkflow(frontendWorkflow: FrontendWorkflow): BackendWo
             id: edge.id,
             source: edge.source,
             target: edge.target,
-            sourceHandle: edge.sourceHandle,
+            sourceHandle: edge.sourceHandle
         })),
     };
 }
@@ -52,7 +91,7 @@ export function toFrontendWorkflow(
             id: edge.id || `edge-${index}`,
             source: edge.source,
             target: edge.target,
-            sourceHandle: edge.sourceHandle,
+            sourceHandle: edge.sourceHandle
         })),
         createdAt: existingWorkflow?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),

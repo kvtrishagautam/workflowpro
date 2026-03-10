@@ -41,10 +41,7 @@ export async function saveWorkflow(workflowData: IWorkflow): Promise<IWorkflow> 
                 const nodeId = node.id || `node-${Date.now()}-${idx}`;
                 const nodeData = node.data || {};
 
-                // Default label
                 const label = nodeData.label || node.type || `Node ${idx + 1}`;
-
-                // Default position
                 const position = node.position || { x: 100 + idx * 200, y: 100 };
                 if (typeof position.x !== 'number') position.x = Number(position.x) || 100 + idx * 200;
                 if (typeof position.y !== 'number') position.y = Number(position.y) || 100;
@@ -72,7 +69,6 @@ export async function saveWorkflow(workflowData: IWorkflow): Promise<IWorkflow> 
                 };
             });
 
-            // Build a sanitized document for Mongoose (omit incoming `id`/_id fields)
             const doc: any = {
                 userId: (workflowData as any).userId || new mongoose.Types.ObjectId(),
                 id: (workflowData as any).id || `wf_${Date.now()}`,
@@ -83,7 +79,6 @@ export async function saveWorkflow(workflowData: IWorkflow): Promise<IWorkflow> 
                 isActive: typeof workflowData.isActive === 'boolean' ? workflowData.isActive : true,
             };
 
-            // Only set webhookUrl if provided; otherwise schema default will apply
             if (workflowData.webhookUrl) doc.webhookUrl = workflowData.webhookUrl;
 
             const newWorkflow = new Workflow(doc);
@@ -118,6 +113,9 @@ export async function findWorkflowByWebhook(
     method: string
 ): Promise<IWorkflow | undefined> {
     try {
+        // Normalize path: ensure it starts with /
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
         // Find workflows that have a webhook node
         const workflows = await Workflow.find({
             'nodes.type': 'webhook',
@@ -128,20 +126,25 @@ export async function findWorkflowByWebhook(
             workflow.nodes.some((node) => {
                 if (node.type !== 'webhook') return false;
 
-                // Support both old format (method) and new format (httpMethod)
+                // Support both React Flow structure (node.data.config) and direct structure (node.config)
                 const config = node.data?.config || (node as any).config || {};
+
+                // Support both old format (method) and new format (httpMethod)
                 const nodeMethod = config.httpMethod || config.method || 'POST';
-                const nodePath = config.path || '/';
+                let nodePath = config.path || '/';
+
+                // Normalize nodePath: ensure it starts with /
+                nodePath = nodePath.startsWith('/') ? nodePath : `/${nodePath}`;
 
                 // Check for exact path match
-                if (nodePath === path && nodeMethod === method) {
+                if (nodePath === normalizedPath && nodeMethod === method) {
                     return true;
                 }
 
                 // Check for route parameter match (e.g., /:id matches /123)
                 if (nodePath.includes(':')) {
                     const pathParts = nodePath.split('/');
-                    const requestParts = path.split('/');
+                    const requestParts = normalizedPath.split('/');
 
                     if (pathParts.length !== requestParts.length) return false;
 
@@ -183,9 +186,6 @@ export function extractRouteParams(
     return params;
 }
 
-/**
- * Get all workflows
- */
 /**
  * Get all workflows (admin only or internal use)
  */

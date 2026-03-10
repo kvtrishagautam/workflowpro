@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "concurrently \"pnpm --filter backend start\" \"pnpm --filter frontend start\"",
-    "build": "pnpm --filter backend build && pnpm --filter frontend build",
-    "test": "pnpm --filter backend test && pnpm --filter frontend test"
-  },
-  "devDependencies": {
-    "concurrently": "^6.0.0"
+    "start": "pnpm --filter ai-workflow-automation-backend start & pnpm --filter ai-workflow-automation-frontend start",
+    "start:backend": "pnpm --filter ai-workflow-automation-backend start",
+    "start:frontend": "pnpm --filter ai-workflow-automation-frontend start",
+    "build": "pnpm --filter ai-workflow-automation-backend build && pnpm --filter ai-workflow-automation-frontend build",
+    "test": "pnpm --filter ai-workflow-automation-backend test && pnpm --filter ai-workflow-automation-frontend test"
   },
   "workspaces": [
     "frontend",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NodeProps, NODE_TYPES } from '../types';
 import './NodeConfigPanel.css';
+import { DashboardPortalConfig } from './DashboardPortalConfig';
 
 interface NodeConfigPanelProps {
     node: NodeProps;
@@ -22,6 +23,9 @@ const nodeMetadata: Record<string, { icon: string; label: string; color: string 
     [NODE_TYPES.HTTP]: { icon: '🌐', label: 'HTTP Request', color: '#FBBF24' },
     [NODE_TYPES.SLACK]: { icon: '💬', label: 'Slack', color: '#4A154B' },
     [NODE_TYPES.EMAIL]: { icon: '📧', label: 'Email', color: '#EA4335' },
+    [NODE_TYPES.EMAIL_DISCOVERY]: { icon: '🔍', label: 'Email Discovery', color: '#10B981' },
+    [NODE_TYPES.EMAIL_SENDING]: { icon: '📤', label: 'Email Sending', color: '#F59E0B' },
+    [NODE_TYPES.SCHEDULED_EMAIL]: { icon: '📅', label: 'Scheduled Email', color: '#8B5CF6' },
     [NODE_TYPES.WHATSAPP]: { icon: '📱', label: 'WhatsApp', color: '#25D366' },
     [NODE_TYPES.TELEGRAM]: { icon: '✈️', label: 'Telegram', color: '#0088CC' },
     [NODE_TYPES.DISCORD]: { icon: '🎮', label: 'Discord', color: '#5865F2' },
@@ -46,6 +50,11 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
         setConfig(newConfig);
     };
 
+    const updateConfigBatch = (updates: Record<string, any>) => {
+        const newConfig = { ...config, ...updates };
+        setConfig(newConfig);
+    };
+
     const handleSave = () => {
         onConfigChange(node.id, config);
         onClose();
@@ -55,10 +64,26 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
 
     const renderConfigFields = () => {
         switch (node.type) {
+            case NODE_TYPES.DASHBOARD_PORTAL:
+                return <DashboardPortalConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.SCHEDULE:
-                return <ScheduleConfig config={config} updateConfig={updateConfig} />;
+                return <ScheduleConfig config={config} updateConfig={updateConfig} updateConfigBatch={updateConfigBatch} />;
+            case NODE_TYPES.CSV_READ:
+                return <CSVReadConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.DATA_CLEANER:
+                return <DataCleanerConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.ANALYSIS_ENGINE:
+                return <AnalysisEngineConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.MDB_STORAGE:
+                return <MongoDbStorageConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.EMAIL:
                 return <EmailConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.EMAIL_DISCOVERY:
+                return <EmailDiscoveryConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.EMAIL_SENDING:
+                return <EmailSendingConfig config={config} updateConfig={updateConfig} />;
+            case NODE_TYPES.SCHEDULED_EMAIL:
+                return <ScheduledEmailConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.WHATSAPP:
                 return <WhatsAppConfig config={config} updateConfig={updateConfig} />;
             case NODE_TYPES.TELEGRAM:
@@ -146,10 +171,208 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
 interface ConfigProps {
     config: Record<string, any>;
     updateConfig: (key: string, value: any) => void;
+    updateConfigBatch?: (updates: Record<string, any>) => void;
 }
 
+// ----- NEW NODE CONFIG COMPONENTS -----
+
+const CSVReadConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => (
+    <div className="config-section">
+        <label>Delimiters (comma separated)</label>
+        <input
+            type="text"
+            value={config.delimiters || ','}
+            onChange={(e) => updateConfig('delimiters', e.target.value)}
+            placeholder="e.g. , ; |"
+            className="config-input"
+        />
+
+        <div className="checkbox-wrap mt-3">
+            <input
+                type="checkbox"
+                id="skipEmpty"
+                checked={config.skipEmptyLines !== false}
+                onChange={(e) => updateConfig('skipEmptyLines', e.target.checked)}
+            />
+            <label htmlFor="skipEmpty">Skip Empty Lines</label>
+        </div>
+
+        <label className="mt-3">CSV Raw Data String</label>
+        <textarea
+            value={config.csvData || ''}
+            onChange={(e) => updateConfig('csvData', e.target.value)}
+            placeholder="Paste raw CSV data here (for testing/demo)"
+            className="config-input nodrag nowheel"
+            rows={5}
+        />
+        <small className="help-text text-muted">Leave blank if data is piped from a previous node.</small>
+    </div>
+);
+
+const DataCleanerConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => (
+    <div className="config-section">
+        <h4>Cleaning Options</h4>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="removeEmpty"
+                checked={config.removeEmptyRows !== false}
+                onChange={(e) => updateConfig('removeEmptyRows', e.target.checked)} />
+            <label htmlFor="removeEmpty">Remove Empty Rows</label>
+        </div>
+        <small className="help-text">Strips rows where all fields are blank.</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="trimStrings"
+                checked={config.trimStrings !== false}
+                onChange={(e) => updateConfig('trimStrings', e.target.checked)} />
+            <label htmlFor="trimStrings">Trim Whitespace</label>
+        </div>
+        <small className="help-text">Removes leading/trailing spaces from all text values.</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="convertNumbers"
+                checked={config.convertToNumbers !== false}
+                onChange={(e) => updateConfig('convertToNumbers', e.target.checked)} />
+            <label htmlFor="convertNumbers">Convert Numbers</label>
+        </div>
+        <small className="help-text">Converts numeric strings like "42000" to real numbers.</small>
+
+        <div className="checkbox-wrap mt-2" style={{ marginTop: 14 }}>
+            <input type="checkbox" id="normalizeCase"
+                checked={config.normalizeCase !== false}
+                onChange={(e) => updateConfig('normalizeCase', e.target.checked)} />
+            <label htmlFor="normalizeCase">🔤 Normalize Text Casing</label>
+        </div>
+        <small className="help-text">Title-cases category, department, employee, merchant etc. — fixes "MARKETING" → "Marketing", "cloud infrastructure" → "Cloud Infrastructure".</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="normalizeDates"
+                checked={config.normalizeDates !== false}
+                onChange={(e) => updateConfig('normalizeDates', e.target.checked)} />
+            <label htmlFor="normalizeDates">📅 Normalize Date Formats</label>
+        </div>
+        <small className="help-text">Converts MM/DD/YYYY, DD-MM-YYYY, YYYY/MM/DD → standard YYYY-MM-DD for consistent analysis.</small>
+
+        <div className="checkbox-wrap mt-2">
+            <input type="checkbox" id="removeOutliers"
+                checked={config.removeOutliers !== false}
+                onChange={(e) => updateConfig('removeOutliers', e.target.checked)} />
+            <label htmlFor="removeOutliers">📊 Remove Outliers (Z-score)</label>
+        </div>
+        <small className="help-text">Removes rows where any numeric value is statistically extreme. Prevents one bad value from skewing all charts.</small>
+
+        {config.removeOutliers !== false && (
+            <div style={{ marginTop: 8 }}>
+                <label>Outlier Threshold (std deviations)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="range" min={1} max={5} step={0.5}
+                        value={config.outlierThreshold ?? 3}
+                        onChange={(e) => updateConfig('outlierThreshold', parseFloat(e.target.value))}
+                        style={{ flex: 1 }} />
+                    <span style={{ fontWeight: 700, color: '#667eea', minWidth: 24 }}>
+                        {config.outlierThreshold ?? 3}σ
+                    </span>
+                </div>
+                <small className="help-text">3σ = aggressive, 5σ = only extreme outliers. Default: 3.</small>
+            </div>
+        )}
+
+        <div style={{ marginTop: 14 }}>
+            <label>Fill Missing Values With (Optional)</label>
+            <input type="text" value={config.fillMissingValuesWith || ''}
+                onChange={(e) => updateConfig('fillMissingValuesWith', e.target.value)}
+                placeholder="e.g. N/A, 0, or leave blank"
+                className="config-input" />
+        </div>
+    </div>
+);
+
+const AnalysisEngineConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+    const categories = ['Sales', 'Tasks', 'Attendance', 'Expenses', 'Generic'];
+    const labels: Record<string, string> = {
+        Sales: '💰 Sales & Revenue',
+        Tasks: '✅ Task Management',
+        Attendance: '🕐 Employee Attendance',
+        Expenses: '💸 Expenses',
+        Generic: '⚙️ Generic / Passthrough',
+    };
+
+    const selected: string[] = Array.isArray(config.categories)
+        ? config.categories
+        : config.category
+            ? [config.category]
+            : ['Tasks'];
+
+    const toggle = (cat: string) => {
+        const next = selected.includes(cat)
+            ? selected.filter((c) => c !== cat)
+            : [...selected, cat];
+        updateConfig('categories', next.length ? next : [cat]);
+    };
+
+    return (
+        <div className="config-section">
+            <label>Analysis Categories</label>
+            <small className="help-text text-muted" style={{ display: 'block', marginBottom: 8 }}>
+                Select one or more types of analytics to run.
+            </small>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                {categories.map((cat) => (
+                    <label
+                        key={cat}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                            padding: '9px 14px', borderRadius: 8,
+                            background: selected.includes(cat) ? 'linear-gradient(135deg,rgba(102,126,234,.12),rgba(118,75,162,.12))' : 'var(--node-bg,#f8f9fa)',
+                            border: `1.5px solid ${selected.includes(cat) ? '#667eea' : 'var(--border,#dee2e6)'}`,
+                            transition: 'all .18s',
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={selected.includes(cat)}
+                            onChange={() => toggle(cat)}
+                            style={{ width: 16, height: 16, accentColor: '#667eea' }}
+                        />
+                        <span style={{ fontSize: 13, fontWeight: selected.includes(cat) ? 600 : 400 }}>
+                            {labels[cat]}
+                        </span>
+                    </label>
+                ))}
+            </div>
+
+            <label className="mt-3">Dataset Name (Optional)</label>
+            <input
+                type="text"
+                value={config.datasetId || ''}
+                onChange={(e) => updateConfig('datasetId', e.target.value)}
+                placeholder="e.g. Sales_Q3_2026"
+                className="config-input"
+            />
+        </div>
+    );
+};
+
+
+const MongoDbStorageConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => (
+    <div className="config-section">
+        <label>Storage Target</label>
+        <select
+            value={config.collectionName || 'AnalysisResult'}
+            onChange={(e) => updateConfig('collectionName', e.target.value)}
+            className="config-input"
+        >
+            <option value="AnalysisResult">Analysis Results (Dashboard)</option>
+            <option value="RawData" disabled>Raw Dataset (Coming soon)</option>
+        </select>
+        <small className="help-text">Stores the summarized data so the dashboard can fetch it.</small>
+    </div>
+);
+
+// ----------------------------------------
+
 // Schedule Trigger Configuration
-const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig, updateConfigBatch }) => {
     return (
         <div className="config-section">
             <h4>Schedule Settings</h4>
@@ -166,28 +389,83 @@ const ScheduleConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                 </select>
             </div>
 
-            {config.mode === 'interval' && (
+            {(config.mode === 'interval' || !config.mode) && (
                 <>
                     <div className="form-group">
-                        <label>Every</label>
-                        <div className="inline-inputs">
-                            <input
-                                type="number"
-                                value={config.intervalValue || 5}
-                                onChange={(e) => updateConfig('intervalValue', parseInt(e.target.value))}
-                                min="1"
-                            />
-                            <select
-                                value={config.intervalUnit || 'minutes'}
-                                onChange={(e) => updateConfig('intervalUnit', e.target.value)}
-                            >
-                                <option value="seconds">Seconds</option>
-                                <option value="minutes">Minutes</option>
-                                <option value="hours">Hours</option>
-                                <option value="days">Days</option>
-                            </select>
-                        </div>
+                        <label>Quick Select</label>
+                        <select
+                            value={config.quickInterval || 'custom'}
+                            onChange={(e) => {
+                                const val = e.target.value;
+
+                                // Batch all config updates together
+                                let updates: Record<string, any> = { quickInterval: val };
+
+                                if (val === '5min') {
+                                    updates.intervalValue = 5;
+                                    updates.intervalUnit = 'minutes';
+                                } else if (val === '15min') {
+                                    updates.intervalValue = 15;
+                                    updates.intervalUnit = 'minutes';
+                                } else if (val === '30min') {
+                                    updates.intervalValue = 30;
+                                    updates.intervalUnit = 'minutes';
+                                } else if (val === '1hour') {
+                                    updates.intervalValue = 1;
+                                    updates.intervalUnit = 'hours';
+                                } else if (val === '6hours') {
+                                    updates.intervalValue = 6;
+                                    updates.intervalUnit = 'hours';
+                                } else if (val === '12hours') {
+                                    updates.intervalValue = 12;
+                                    updates.intervalUnit = 'hours';
+                                } else if (val === '24hours') {
+                                    updates.intervalValue = 24;
+                                    updates.intervalUnit = 'hours';
+                                }
+
+                                // Apply all updates at once using batch function
+                                if (updateConfigBatch) {
+                                    updateConfigBatch(updates);
+                                } else {
+                                    // Fallback to individual updates if batch not available
+                                    Object.keys(updates).forEach(key => updateConfig(key, updates[key]));
+                                }
+                            }}
+                        >
+                            <option value="custom">Custom...</option>
+                            <option value="5min">Every 5 minutes</option>
+                            <option value="15min">Every 15 minutes</option>
+                            <option value="30min">Every 30 minutes</option>
+                            <option value="1hour">Every 1 hour</option>
+                            <option value="6hours">Every 6 hours</option>
+                            <option value="12hours">Every 12 hours</option>
+                            <option value="24hours">Every 24 hours (Daily)</option>
+                        </select>
                     </div>
+
+                    {(!config.quickInterval || config.quickInterval === 'custom') && (
+                        <div className="form-group">
+                            <label>Custom Interval</label>
+                            <div className="inline-inputs">
+                                <input
+                                    type="number"
+                                    value={config.intervalValue || 5}
+                                    onChange={(e) => updateConfig('intervalValue', parseInt(e.target.value))}
+                                    min="1"
+                                />
+                                <select
+                                    value={config.intervalUnit || 'minutes'}
+                                    onChange={(e) => updateConfig('intervalUnit', e.target.value)}
+                                >
+                                    <option value="seconds">Seconds</option>
+                                    <option value="minutes">Minutes</option>
+                                    <option value="hours">Hours</option>
+                                    <option value="days">Days</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
 
@@ -348,6 +626,19 @@ const WhatsAppConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
             <h4>WhatsApp Business Settings</h4>
 
             <div className="form-group">
+                <label>Operation</label>
+                <select
+                    value={config.operation || 'sendMessage'}
+                    onChange={(e) => updateConfig('operation', e.target.value)}
+                >
+                    <option value="sendMessage">Send Text Message</option>
+                    <option value="sendTemplate">Send Template Message</option>
+                    <option value="sendMedia">Send Media</option>
+                </select>
+            </div>
+
+
+            <div className="form-group">
                 <label>Phone Number ID</label>
                 <input
                     type="text"
@@ -431,14 +722,14 @@ const TelegramConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                 />
             </div>
 
-            {config.operation === 'sendMessage' && (
+            {(config.operation === 'sendMessage' || !config.operation) && (
                 <>
                     <div className="form-group">
                         <label>Message</label>
                         <textarea
                             value={config.message || ''}
                             onChange={(e) => updateConfig('message', e.target.value)}
-                            placeholder="Your message here..."
+                            placeholder="Your message here... Use {{variableName}} for dynamic data"
                             rows={4}
                         />
                     </div>
@@ -1023,11 +1314,18 @@ const OpenAIConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
                         </>
                     ) : (
                         <>
-                            <option value="gpt-4">GPT-4</option>
-                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-4o-mini">GPT-4o Mini</option>
-                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            <optgroup label="🔓 Free Models (Gemini)">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (FREE - Recommended)</option>
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash (FREE)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (FREE)</option>
+                            </optgroup>
+                            <optgroup label="💳 OpenAI Models (Paid)">
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </optgroup>
                         </>
                     )}
                 </select>
@@ -1699,13 +1997,13 @@ function getCredentialFields(nodeType: string): { key: string; label: string; ty
             return [{ key: 'telegramBotToken', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...', helpText: 'Get from @BotFather' }];
         case NODE_TYPES.WHATSAPP:
             return [
-                { key: 'whatsappToken', label: 'Access Token', type: 'password', helpText: 'From Meta Business Suite' },
-                { key: 'whatsappPhoneNumberId', label: 'Phone Number ID', placeholder: '123456789012345' },
+                { key: 'apiToken', label: 'Access Token', type: 'password', placeholder: 'EAAxxxxxxxxxx', helpText: 'From Meta Business Suite > WhatsApp > API Setup' },
+                { key: 'phoneNumberId', label: 'Phone Number ID', placeholder: '123456789012345', helpText: 'Found in WhatsApp Business API settings' },
             ];
         case NODE_TYPES.OPENAI:
             return [{ key: 'openaiApiKey', label: 'API Key', type: 'password', placeholder: 'sk-...', helpText: 'From OpenAI dashboard' }];
         case NODE_TYPES.GOOGLE_SHEETS:
-            return [{ key: 'googleServiceAccount', label: 'Service Account JSON', type: 'password', helpText: 'Paste entire JSON key file' }];
+            return [{ key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'ya29.a0...', helpText: 'OAuth2 access token from Google OAuth Playground (https://developers.google.com/oauthplayground)' }];
         case NODE_TYPES.AIRTABLE:
             return [{ key: 'airtableApiKey', label: 'API Key', type: 'password', helpText: 'Personal access token from Airtable' }];
         case NODE_TYPES.NOTION:
@@ -1730,5 +2028,239 @@ function getCredentialFields(nodeType: string): { key: string; label: string; ty
             return [];
     }
 }
+
+// Email Discovery Configuration
+const EmailDiscoveryConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+    const [keywordInput, setKeywordInput] = useState('');
+    const [domainInput, setDomainInput] = useState('');
+
+
+    const addKeyword = () => {
+        if (keywordInput.trim()) {
+            const keywords = config.keywords || [];
+            updateConfig('keywords', [...keywords, keywordInput.trim()]);
+            setKeywordInput('');
+        }
+    };
+
+    const removeKeyword = (index: number) => {
+        const keywords = config.keywords || [];
+        updateConfig('keywords', keywords.filter((_: any, i: number) => i !== index));
+    };
+
+    const addDomain = () => {
+        if (domainInput.trim()) {
+            const domains = config.targetDomains || [];
+            updateConfig('targetDomains', [...domains, domainInput.trim()]);
+            setDomainInput('');
+        }
+    };
+
+    const removeDomain = (index: number) => {
+        const domains = config.targetDomains || [];
+        updateConfig('targetDomains', domains.filter((_: any, i: number) => i !== index));
+    };
+
+    return (
+        <div className="config-section">
+            <h4>Email Discovery Settings</h4>
+
+            <div className="form-group">
+                <label>Keywords</label>
+                <div className="array-input">
+                    <input
+                        type="text"
+                        value={keywordInput}
+                        onChange={(e) => setKeywordInput(e.target.value)}
+                        placeholder="technology, startup, etc."
+                        onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
+                    />
+                    <button type="button" onClick={addKeyword} className="add-btn">Add</button>
+                </div>
+                <div className="array-items">
+                    {(config.keywords || []).map((keyword: string, i: number) => (
+                        <div key={i} className="array-item">
+                            <span>{keyword}</span>
+                            <button type="button" onClick={() => removeKeyword(i)} className="remove-btn">×</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="form-group">
+                <label>Industry</label>
+                <select
+                    value={config.industry || ''}
+                    onChange={(e) => updateConfig('industry', e.target.value)}
+                >
+                    <option value="">Any Industry</option>
+                    <option value="technology">Technology</option>
+                    <option value="education">Education</option>
+                    <option value="business">Business</option>
+                    <option value="startup">Startup</option>
+                    <option value="opensource">Open Source</option>
+                </select>
+            </div>
+
+            <div className="form-group">
+                <label>Target Domains (Optional)</label>
+                <div className="array-input">
+                    <input
+                        type="text"
+                        value={domainInput}
+                        onChange={(e) => setDomainInput(e.target.value)}
+                        placeholder="gmail.com, company.com"
+                        onKeyPress={(e) => e.key === 'Enter' && addDomain()}
+                    />
+                    <button type="button" onClick={addDomain} className="add-btn">Add</button>
+                </div>
+                <div className="array-items">
+                    {(config.targetDomains || []).map((domain: string, i: number) => (
+                        <div key={i} className="array-item">
+                            <span>{domain}</span>
+                            <button type="button" onClick={() => removeDomain(i)} className="remove-btn">×</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="form-group">
+                <label>Max Emails</label>
+                <input
+                    type="number"
+                    value={config.maxEmails || 50}
+                    onChange={(e) => updateConfig('maxEmails', parseInt(e.target.value))}
+                    min="1"
+                    max="500"
+                />
+                <small className="help-text">Maximum number of emails to discover (1-500)</small>
+            </div>
+        </div>
+    );
+};
+
+// Email Sending Configuration
+const EmailSendingConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+    return (
+        <div className="config-section">
+            <h4>Email Sending Settings</h4>
+
+            <div className="form-group">
+                <label>Recipient Email (Optional)</label>
+                <input
+                    type="email"
+                    value={config.recipient || ''}
+                    onChange={(e) => updateConfig('recipient', e.target.value)}
+                    placeholder="recipient@example.com"
+                />
+                <small className="help-text">Leave empty to use emails from previous node</small>
+            </div>
+
+            <div className="form-group">
+                <label>Subject</label>
+                <input
+                    type="text"
+                    value={config.subject || ''}
+                    onChange={(e) => updateConfig('subject', e.target.value)}
+                    placeholder="Email subject"
+                />
+            </div>
+
+            <div className="form-group">
+                <label>Body</label>
+                <textarea
+                    value={config.body || ''}
+                    onChange={(e) => updateConfig('body', e.target.value)}
+                    placeholder="Email content (HTML supported)"
+                    rows={8}
+                />
+            </div>
+        </div>
+    );
+};
+
+// Scheduled Email Configuration
+const ScheduledEmailConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
+    return (
+        <div className="config-section">
+            <h4>Scheduled Email Settings</h4>
+
+            <div className="form-group">
+                <label>Schedule Type</label>
+                <select
+                    value={config.scheduleType || 'one-time'}
+                    onChange={(e) => updateConfig('scheduleType', e.target.value)}
+                >
+                    <option value="one-time">One-Time</option>
+                    <option value="recurring">Recurring</option>
+                </select>
+            </div>
+
+            {config.scheduleType === 'one-time' && (
+                <div className="form-group">
+                    <label>Scheduled Date & Time</label>
+                    <input
+                        type="datetime-local"
+                        value={config.scheduledDateTime || ''}
+                        onChange={(e) => updateConfig('scheduledDateTime', e.target.value)}
+                    />
+                </div>
+            )}
+
+            {config.scheduleType === 'recurring' && (
+                <div className="form-group">
+                    <label>Cron Expression</label>
+                    <input
+                        type="text"
+                        value={config.cronExpression || ''}
+                        onChange={(e) => updateConfig('cronExpression', e.target.value)}
+                        placeholder="0 9 * * 1 (Every Monday at 9 AM)"
+                    />
+                    <small className="help-text">Format: minute hour day month weekday</small>
+                </div>
+            )}
+
+            <div className="form-group">
+                <label>Subject</label>
+                <input
+                    type="text"
+                    value={config.subject || ''}
+                    onChange={(e) => updateConfig('subject', e.target.value)}
+                    placeholder="Email subject"
+                />
+            </div>
+
+            <div className="form-group">
+                <label>Body</label>
+                <textarea
+                    value={config.body || ''}
+                    onChange={(e) => updateConfig('body', e.target.value)}
+                    placeholder="Email content (HTML supported)"
+                    rows={6}
+                />
+            </div>
+
+            <div className="form-group">
+                <label>Recipients (comma-separated)</label>
+                <input
+                    type="text"
+                    value={config.recipients || ''}
+                    onChange={(e) => updateConfig('recipients', e.target.value)}
+                    placeholder="email1@example.com, email2@example.com"
+                />
+            </div>
+
+            <div className="form-group">
+                <label>Recipient Group ID (Optional)</label>
+                <input
+                    type="text"
+                    value={config.recipientGroupId || ''}
+                    onChange={(e) => updateConfig('recipientGroupId', e.target.value)}
+                    placeholder="Group ID from database"
+                />
+            </div>
+        </div>
+    );
+};
 
 export default NodeConfigPanel;
