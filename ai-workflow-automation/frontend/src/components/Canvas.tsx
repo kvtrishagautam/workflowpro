@@ -45,7 +45,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
             const isTyping = el?.tagName === 'INPUT' ||
                 el?.tagName === 'TEXTAREA' ||
                 el?.tagName === 'SELECT' ||
-                (el as HTMLElement)?.isContentEditable ||
+                (el && 'isContentEditable' in el && el.isContentEditable) ||
                 el?.closest?.('.node-config-panel') !== null;
 
             if (e.key === ' ' && !isTyping) {
@@ -83,6 +83,30 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
             window.removeEventListener('keyup', handleKeyUp);
         };
     }, [selectedEdge, selectedStickyNoteId]);
+
+    // ─── Sticky Note Handlers (must be before early return) ───────────────
+    const addStickyNote = useCallback(() => {
+        if (!workflow) return;
+        const canvas = canvasRef.current;
+        const stickyNotes = workflow.stickyNotes || [];
+        const rect = canvas?.getBoundingClientRect();
+        const cw = rect?.width || 800;
+        const ch = rect?.height || 600;
+        const x = (cw / 2 - pan.x) / zoom - 100;
+        const y = (ch / 2 - pan.y) / zoom - 75;
+        const newNote: StickyNoteType = {
+            id: `sticky_${Date.now()}`,
+            content: '',
+            position: { x: Math.max(0, x), y: Math.max(0, y) },
+            size: { width: 200, height: 150 },
+            color: 'yellow',
+            zIndex: stickyNotes.length + 1,
+        };
+        onWorkflowChange?.({ ...workflow, stickyNotes: [...stickyNotes, newNote] });
+        setSelectedStickyNoteId(newNote.id);
+    }, [workflow, pan, zoom, onWorkflowChange]);
+
+    addStickyNoteRef.current = addStickyNote;
 
     if (!workflow) {
         return <div className="canvas empty">No workflow loaded</div>;
@@ -391,29 +415,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
         onWorkflowChange?.(updated);
     };
 
-    // ─── Sticky Note Handlers ─────────────────────────────────────────────
-    const addStickyNote = useCallback(() => {
-        const canvas = canvasRef.current;
-        const stickyNotes = workflow.stickyNotes || [];
-        const rect = canvas?.getBoundingClientRect();
-        const cw = rect?.width || 800;
-        const ch = rect?.height || 600;
-        const x = (cw / 2 - pan.x) / zoom - 100;
-        const y = (ch / 2 - pan.y) / zoom - 75;
-        const newNote: StickyNoteType = {
-            id: `sticky_${Date.now()}`,
-            content: '',
-            position: { x: Math.max(0, x), y: Math.max(0, y) },
-            size: { width: 200, height: 150 },
-            color: 'yellow',
-            zIndex: stickyNotes.length + 1,
-        };
-        onWorkflowChange?.({ ...workflow, stickyNotes: [...stickyNotes, newNote] });
-        setSelectedStickyNoteId(newNote.id);
-    }, [workflow, pan, zoom, onWorkflowChange]);
-
-    addStickyNoteRef.current = addStickyNote;
-
+    // ─── Sticky Note Handlers (moved before early return for React hooks rules) ───
     const handleStickyNoteSelect = (noteId: string) => {
         setSelectedStickyNoteId(noteId);
         setSelectedNodeId(null);

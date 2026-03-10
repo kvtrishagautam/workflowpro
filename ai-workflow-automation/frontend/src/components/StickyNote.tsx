@@ -76,8 +76,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (isEditing || isResizing) return;
-        const target = e.target as HTMLElement;
-        if (target.closest('.sticky-note-toolbar') || target.closest('.sticky-note-resize-handle')) return;
+        const target = e.target;
+        if (target instanceof HTMLElement && (target.closest('.sticky-note-toolbar') || target.closest('.sticky-note-resize-handle'))) return;
         e.stopPropagation();
         onSelect(note.id);
         onDragStart(e, note.id);
