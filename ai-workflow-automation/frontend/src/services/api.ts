@@ -1,6 +1,6 @@
 import { Workflow } from '../types';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:4000';
 
 export interface NodeSchema {
     id: string;
@@ -63,8 +63,8 @@ class ApiService {
                             if (!smtpHost && rawConfig.smtpUser && rawConfig.smtpUser.includes('@')) {
                                 const domain = rawConfig.smtpUser.split('@')[1];
                                 if (domain === 'gmail.com') smtpHost = 'smtp.gmail.com';
-                                else if (['outlook.com','hotmail.com','live.com'].includes(domain)) smtpHost = 'smtp-mail.outlook.com';
-                                else if (['yahoo.com','ymail.com'].includes(domain)) smtpHost = 'smtp.mail.yahoo.com';
+                                else if (['outlook.com', 'hotmail.com', 'live.com'].includes(domain)) smtpHost = 'smtp-mail.outlook.com';
+                                else if (['yahoo.com', 'ymail.com'].includes(domain)) smtpHost = 'smtp.mail.yahoo.com';
                                 else smtpHost = `smtp.${domain}`;
                                 console.log(`[API] Auto-inferred SMTP host: ${smtpHost}`);
                             }

@@ -1,6 +1,6 @@
 // API service for backend communication
 
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'http://localhost:4000';
 
 export interface SaveWorkflowResponse {
     status: string;
@@ -32,10 +32,16 @@ export class WorkflowAPI {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to save workflow');
+            throw new Error(error.message || error.error || 'Failed to save workflow');
         }
 
-        return response.json();
+        const data = await response.json();
+        // Normalize response: backend returns { message, workflow } or { status, workflowId, webhooks }
+        return {
+            status: data.status || 'success',
+            workflowId: data.workflowId || data.workflow?.id || '',
+            webhooks: data.webhooks || [],
+        };
     }
 
     /**

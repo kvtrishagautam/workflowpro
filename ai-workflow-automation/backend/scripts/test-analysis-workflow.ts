@@ -8,7 +8,7 @@ import * as path from 'path';
  * Prerequisites: Backend must be running on port 5000 (npm run dev)
  */
 
-const API_URL = 'http://localhost:5000/api/workflows/execute';
+const API_URL = 'http://localhost:4000/api/workflows/execute';
 
 interface WorkflowTest {
     name: string;

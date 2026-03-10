@@ -8,7 +8,7 @@ interface ConfigProps {
 export const DashboardPortalConfig: React.FC<ConfigProps> = ({ config, updateConfig }) => {
 
     const handleLaunchDashboard = () => {
-        window.open('http://localhost:5000/standalone-dashboard.html', '_blank');
+        window.open('http://localhost:4000/standalone-dashboard.html', '_blank');
     };
 
     return (
@@ -21,7 +21,7 @@ export const DashboardPortalConfig: React.FC<ConfigProps> = ({ config, updateCon
                     This node links to the live analytics dashboard. It automatically shows the category that was just analyzed — no setup needed.
                 </p>
                 <p style={{ fontSize: '13px', color: '#6c757d', marginBottom: '20px' }}>
-                    <b>Data Endpoint:</b> <code>http://localhost:5000/api/analysis/results/latest</code>
+                    <b>Data Endpoint:</b> <code>http://localhost:4000/api/analysis/results/latest</code>
                 </p>
 
                 <button

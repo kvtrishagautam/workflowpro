@@ -717,7 +717,7 @@ export const emailDiscoveryNode: WorkflowNode = {
                     while (i < urlsToScrape.length) {
                         try {
                             if (new URL(urlsToScrape[i]).host !== currentHost) break;
-                        } catch {}
+                        } catch { }
                         i++;
                     }
                     consecutiveFailures = 0;

@@ -282,7 +282,7 @@ const Editor: React.FC = () => {
             if (response.webhooks && response.webhooks.length > 0) {
                 console.log('📍 Registered webhooks:');
                 response.webhooks.forEach((webhook) => {
-                    console.log(`   ${webhook.method} http://localhost:5000${webhook.path}`);
+                    console.log(`   ${webhook.method} http://localhost:4000${webhook.path}`);
                 });
             }
 
