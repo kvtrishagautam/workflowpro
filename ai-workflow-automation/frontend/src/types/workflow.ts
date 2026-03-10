@@ -22,7 +22,15 @@ export type NodeType =
   | 'notion'
   | 'openai'
   | 'mysql'
-  | 'postgres';
+  | 'postgres'
+  | 'EMAIL_DISCOVERY'
+  | 'EMAIL_SENDING'
+  | 'SCHEDULED_EMAIL'
+  | 'csvRead'
+  | 'dataCleaner'
+  | 'analysisEngine'
+  | 'mongoDbStorage'
+  | 'dashboardPortal';
 
 export interface WorkflowNodeData {
   id: string;

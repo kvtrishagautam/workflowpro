@@ -978,13 +978,50 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
 
     const baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
 
+    // Helper to process values (JSON parsing + variable substitution)
+    const processValues = (inputValues: any) => {
+        const processSingleValue = (val: any) => {
+            if (typeof val !== 'string') return val;
+            // Support both ${data.name} and {{body.name}} formats
+            let processed = val.replace(/\${([^}]+)}/g, (_, path) => {
+                const cleanPath = path.replace('data.', '').trim();
+                const value = getNestedProperty(data, cleanPath);
+                return value !== undefined ? value : '';
+            });
+
+            // Fallback to the existing replaceVariables for {{...}} support
+            processed = replaceVariables(processed, data);
+            return processed;
+        };
+
+        if (typeof inputValues === 'string' && inputValues.trim().startsWith('[')) {
+            try {
+                let parsed = JSON.parse(inputValues);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(processSingleValue);
+                }
+            } catch (e) {
+                // Fall through to single value processing
+            }
+        }
+
+        if (Array.isArray(inputValues)) {
+            return inputValues.map(processSingleValue);
+        }
+
+        if (inputValues) {
+            return [processSingleValue(inputValues)];
+        }
+
+        return extractRowFromData(data);
+    };
+
     try {
         switch (operation) {
             case 'append': {
-                // Prepare values - extract from data or use configured values
-                const values = config.values || extractRowFromData(data);
+                const values = processValues(config.values);
 
-                console.log(`[GOOGLE_SHEETS] Appending row:`, values);
+                console.log(`[GOOGLE_SHEETS] Appending row:`, JSON.stringify(values));
 
                 const url = `${baseUrl}/${spreadsheetId}/values/${sheetName}!${range}:append?valueInputOption=USER_ENTERED`;
 
@@ -1063,7 +1100,7 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
             }
 
             case 'update': {
-                const values = config.values || extractRowFromData(data);
+                const values = processValues(config.values);
 
                 console.log(`[GOOGLE_SHEETS] Updating range: ${sheetName}!${range}`);
 

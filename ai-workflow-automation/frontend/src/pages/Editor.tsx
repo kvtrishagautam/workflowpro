@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
 import Canvas from '../components/Canvas';
 import NodePalette from '../components/NodePalette';
 import RunHistory from '../components/RunHistory';
 import WebhookConfigPanel from '../components/WebhookConfigPanel';
 import NodeConfigPanel from '../components/NodeConfigPanel';
-import { Workflow, NodeProps, NODE_TYPES, NodeTypeValue } from '../types';
+import { Workflow, NodeProps, NODE_TYPES } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
 import { executeWorkflow } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
 import Modal from '../components/Modal';
-import { LayoutDashboard } from 'lucide-react';
 import './Editor.css';
 
 const Editor: React.FC = () => {
-    const history = useHistory();
+
     const [workflow, setWorkflow] = useState<Workflow>({
         id: `workflow_${Date.now()}`,
         name: 'New Workflow',

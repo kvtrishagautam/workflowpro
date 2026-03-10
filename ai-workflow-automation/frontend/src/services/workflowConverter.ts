@@ -1,11 +1,11 @@
 import { Workflow as FrontendWorkflow } from '../types';
-import { Workflow as BackendWorkflow, WorkflowNodeData } from '../types/workflow';
+import { Workflow as BackendWorkflow, NodeType } from '../types/workflow';
 
 /**
  * Map frontend node types (camelCase) to backend node types
  */
-function mapNodeTypeToBackend(frontendType: string): string {
-    const typeMap: Record<string, string> = {
+function mapNodeTypeToBackend(frontendType: string): NodeType {
+    const typeMap: Record<string, NodeType> = {
         'webhook': 'webhook',
         'schedule': 'schedule',
         'javascript': 'javascript',
@@ -37,7 +37,8 @@ function mapNodeTypeToBackend(frontendType: string): string {
         'dashboardPortal': 'dashboardPortal',
     };
 
-    return typeMap[frontendType] || frontendType;
+    const result: any = typeMap[frontendType] || frontendType;
+    return result;
 }
 
 /**
@@ -50,7 +51,7 @@ export function toBackendWorkflow(frontendWorkflow: FrontendWorkflow): BackendWo
         description: frontendWorkflow.description,
         nodes: frontendWorkflow.nodes.map((node) => ({
             id: node.id,
-            type: mapNodeTypeToBackend(node.type) as WorkflowNodeData['type'],
+            type: mapNodeTypeToBackend(node.type),
             position: node.position,
             config: node.data.config || {},
             data: {

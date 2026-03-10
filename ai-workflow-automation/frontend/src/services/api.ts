@@ -61,7 +61,7 @@ export default api;
 // email scheduling, job management, and health checks
 // ─────────────────────────────────────────────────────────────
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:4000';
 
 export interface NodeSchema {
     id: string;

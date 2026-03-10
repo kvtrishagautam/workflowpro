@@ -44,7 +44,7 @@ async function runWorkflowTest() {
         // STEP 2: Data Cleaner Node
         console.log('🧹 STEP 2: Cleaning Data...');
         const cleanerResult = await dataCleanerNode.execute({
-            data: csvResult.data || [],
+            rows: csvResult.data || [],
             removeEmptyRows: true,
             trimStrings: true,
             convertToNumbers: true

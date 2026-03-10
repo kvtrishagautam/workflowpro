@@ -3,6 +3,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import webhookRoutes from './routes/webhookRoutes';
 import authRoutes from './routes/auth.routes';
+import workflowRoutes from './routes/workflow.routes';
 import { connectDatabase } from './config/database';
 import { config } from './config/env';
 
@@ -31,6 +32,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+// Mount workflow management routes first
+app.use('/api/workflows', workflowRoutes);
 // Mount API routes under /api to match frontend client baseURL
 app.use('/api', webhookRoutes);
 

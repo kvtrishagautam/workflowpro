@@ -24,6 +24,22 @@ export class WorkflowAPI {
         };
     }
 
+    static async handleResponse(response: Response) {
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+            throw new Error('Session expired. Redirecting to login...');
+        }
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: response.statusText }));
+            throw new Error(error.message || `API error: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
     /**
      * Save a workflow to the backend
      */
@@ -34,12 +50,7 @@ export class WorkflowAPI {
             body: JSON.stringify(workflow),
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to save workflow');
-        }
-
-        return response.json();
+        return this.handleResponse(response);
     }
 
     /**
@@ -50,11 +61,7 @@ export class WorkflowAPI {
             headers: this.getAuthHeaders()
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch workflows');
-        }
-
-        const data = await response.json();
+        const data = await this.handleResponse(response);
         return data.workflows || [];
     }
 
@@ -66,11 +73,7 @@ export class WorkflowAPI {
             headers: this.getAuthHeaders()
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch workflow');
-        }
-
-        return response.json();
+        return this.handleResponse(response);
     }
 
     /**
@@ -82,10 +85,7 @@ export class WorkflowAPI {
             headers: this.getAuthHeaders()
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete workflow');
-        }
+        await this.handleResponse(response);
     }
 
     /**

@@ -1,13 +1,15 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { Workflow } from '../models/Workflow';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 export const createWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { name, description, nodes, edges } = req.body;
+        const workflowId = req.body.id || `wf_${Date.now()}`;
 
         const workflow = new Workflow({
-            id: req.body.id || `wf_${Date.now()}`,
+            id: workflowId,
             userId: req.user._id,
             name,
             description,
@@ -17,7 +19,21 @@ export const createWorkflow = async (req: AuthRequest, res: Response): Promise<v
 
         await workflow.save();
 
-        res.status(201).json({ workflow });
+        const webhookNodes = (nodes || []).filter((n: any) => n.type === 'webhook');
+
+        res.status(201).json({
+            status: 'saved',
+            workflowId: workflow.id,
+            webhooks: webhookNodes.map((n: any) => {
+                const config = n.data?.config || n.config || {};
+                return {
+                    method: config.httpMethod || config.method || 'POST',
+                    path: `/webhook${config.path}`,
+                    testPath: `/webhook/test${config.path}`,
+                    authentication: config.authentication || 'none'
+                };
+            })
+        });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -53,7 +69,10 @@ export const getWorkflows = async (req: AuthRequest, res: Response): Promise<voi
 export const getWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const workflow = await Workflow.findOne({
-            _id: req.params.id,
+            $or: [
+                { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
+                { id: req.params.id }
+            ].filter(q => q !== undefined),
             userId: req.user._id,
         });
 
@@ -62,7 +81,7 @@ export const getWorkflow = async (req: AuthRequest, res: Response): Promise<void
             return;
         }
 
-        res.json({ workflow });
+        res.json(workflow);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -73,7 +92,13 @@ export const updateWorkflow = async (req: AuthRequest, res: Response): Promise<v
         const { name, description, nodes, edges, isActive } = req.body;
 
         const workflow = await Workflow.findOneAndUpdate(
-            { _id: req.params.id, userId: req.user._id },
+            {
+                $or: [
+                    { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
+                    { id: req.params.id }
+                ].filter(q => q !== undefined),
+                userId: req.user._id
+            },
             { name, description, nodes, edges, isActive },
             { new: true, runValidators: true }
         );
@@ -83,7 +108,7 @@ export const updateWorkflow = async (req: AuthRequest, res: Response): Promise<v
             return;
         }
 
-        res.json({ workflow });
+        res.json(workflow);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -92,7 +117,10 @@ export const updateWorkflow = async (req: AuthRequest, res: Response): Promise<v
 export const deleteWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const workflow = await Workflow.findOneAndDelete({
-            _id: req.params.id,
+            $or: [
+                { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
+                { id: req.params.id }
+            ].filter(q => q !== undefined),
             userId: req.user._id,
         });
 
@@ -110,7 +138,10 @@ export const deleteWorkflow = async (req: AuthRequest, res: Response): Promise<v
 export const toggleWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const workflow = await Workflow.findOne({
-            _id: req.params.id,
+            $or: [
+                { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
+                { id: req.params.id }
+            ].filter(q => q !== undefined),
             userId: req.user._id,
         });
 
@@ -122,7 +153,7 @@ export const toggleWorkflow = async (req: AuthRequest, res: Response): Promise<v
         workflow.isActive = !workflow.isActive;
         await workflow.save();
 
-        res.json({ workflow });
+        res.json(workflow);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -131,7 +162,10 @@ export const toggleWorkflow = async (req: AuthRequest, res: Response): Promise<v
 export const executeWorkflow = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const workflow = await Workflow.findOne({
-            _id: req.params.id,
+            $or: [
+                { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
+                { id: req.params.id }
+            ].filter(q => q !== undefined),
             userId: req.user._id,
         });
 
