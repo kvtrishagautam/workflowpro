@@ -9,6 +9,8 @@ import { Workflow, NodeProps, NODE_TYPES, NodeTypeValue } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
 import { executeWorkflow } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
+import { createRun, updateRun } from '../store/runStore';
+import { WorkflowRun } from '../types/run';
 import { LayoutDashboard } from 'lucide-react';
 import './Editor.css';
 
@@ -20,6 +22,7 @@ const Editor: React.FC = () => {
         description: '',
         nodes: [],
         edges: [],
+        stickyNotes: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     });
@@ -298,6 +301,11 @@ const Editor: React.FC = () => {
 
     const handleRunWorkflow = async () => {
         console.log('🚀 Run button clicked!');
+
+        // Create a run entry so RunHistory tracks it
+        const run: WorkflowRun = createRun();
+        run.workflowId = workflow.id;
+
         try {
             console.clear();
             console.log('🚀 Starting workflow execution via backend API...');
@@ -311,13 +319,59 @@ const Editor: React.FC = () => {
             if (result.status === 'success') {
                 console.log('✅ Workflow executed successfully!');
                 console.log('Results:', result.results);
+
+                // Record each node result as a log entry
+                if (result.results) {
+                    result.results.forEach((nodeResult) => {
+                        run.logs.push({
+                            nodeId: nodeResult.nodeId,
+                            nodeType: nodeResult.nodeType,
+                            input: {},
+                            output: nodeResult.result?.data,
+                            status: nodeResult.result?.status === 'success' ? 'success' : 'failed',
+                            error: nodeResult.result?.error,
+                            timestamp: Date.now(),
+                        });
+                    });
+                }
+
+                run.status = 'success';
+                run.finishedAt = Date.now();
+                updateRun(run);
+
                 alert('✅ Workflow executed successfully! Check console for details.');
             } else {
                 console.error('❌ Workflow execution failed:', result.error);
+
+                run.logs.push({
+                    nodeId: 'workflow',
+                    nodeType: 'workflow',
+                    input: {},
+                    status: 'failed',
+                    error: result.error,
+                    timestamp: Date.now(),
+                });
+                run.status = 'failed';
+                run.finishedAt = Date.now();
+                updateRun(run);
+
                 alert(`❌ Workflow failed: ${result.error}`);
             }
         } catch (error) {
             console.error('Workflow execution failed:', error);
+
+            run.logs.push({
+                nodeId: 'workflow',
+                nodeType: 'workflow',
+                input: {},
+                status: 'failed',
+                error: error instanceof Error ? error.message : 'Unknown error',
+                timestamp: Date.now(),
+            });
+            run.status = 'failed';
+            run.finishedAt = Date.now();
+            updateRun(run);
+
             alert(`Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };

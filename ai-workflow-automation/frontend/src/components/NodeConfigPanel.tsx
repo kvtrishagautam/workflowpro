@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NodeProps, NODE_TYPES } from '../types';
 import './NodeConfigPanel.css';
 import { DashboardPortalConfig } from './DashboardPortalConfig';
+import SuccessToast from './SuccessToast';
 
 interface NodeConfigPanelProps {
     node: NodeProps;
@@ -55,8 +56,12 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
         setConfig(newConfig);
     };
 
+    const [showToast, setShowToast] = useState(false);
+    const hideToast = useCallback(() => setShowToast(false), []);
+
     const handleSave = () => {
         onConfigChange(node.id, config);
+        setShowToast(true);
     };
 
     const metadata = nodeMetadata[node.type] || { icon: '⚙️', label: 'Node', color: '#64748b' };
@@ -124,7 +129,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
     };
 
     return (
-        <div className="node-config-panel">
+        <div className="node-config-panel" onKeyDown={(e) => e.stopPropagation()}>
             <div className="config-header" style={{ borderBottomColor: metadata.color }}>
                 <div className="header-title">
                     <span className="header-icon">{metadata.icon}</span>
@@ -159,6 +164,12 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
                 <button className="btn-secondary" onClick={onClose}>Close</button>
                 <button className="btn-primary" onClick={handleSave}>Apply Changes</button>
             </div>
+
+            <SuccessToast
+                message="Changes applied successfully!"
+                visible={showToast}
+                onClose={hideToast}
+            />
         </div>
     );
 };
@@ -2035,6 +2046,14 @@ function getCredentialFields(nodeType: string): { key: string; label: string; ty
                 { key: 'smtpUser', label: 'SMTP Username' },
                 { key: 'smtpPassword', label: 'SMTP Password', type: 'password' },
             ];
+        case NODE_TYPES.EMAIL_SENDING:
+            return [
+                { key: 'smtpHost', label: 'SMTP Host', placeholder: 'smtp.gmail.com', helpText: 'Your outgoing mail server address' },
+                { key: 'smtpPort', label: 'SMTP Port', placeholder: '587', helpText: 'Usually 587 (TLS) or 465 (SSL)' },
+                { key: 'smtpUser', label: 'SMTP Username / Email', placeholder: 'you@gmail.com', helpText: 'The email address used to authenticate' },
+                { key: 'smtpPassword', label: 'SMTP Password', type: 'password', placeholder: 'App password or SMTP password', helpText: 'For Gmail use an App Password (16 chars)' },
+                { key: 'smtpFrom', label: 'From Address (optional)', placeholder: '"My Name" <me@gmail.com>', helpText: 'Defaults to SMTP username if left empty' },
+            ];
         default:
             return [];
     }
@@ -2219,16 +2238,30 @@ const ScheduledEmailConfig: React.FC<ConfigProps> = ({ config, updateConfig }) =
             )}
 
             {config.scheduleType === 'recurring' && (
-                <div className="form-group">
-                    <label>Cron Expression</label>
-                    <input
-                        type="text"
-                        value={config.cronExpression || ''}
-                        onChange={(e) => updateConfig('cronExpression', e.target.value)}
-                        placeholder="0 9 * * 1 (Every Monday at 9 AM)"
-                    />
-                    <small className="help-text">Format: minute hour day month weekday</small>
-                </div>
+                <>
+                    <div className="form-group">
+                        <label>Cron Expression</label>
+                        <input
+                            type="text"
+                            value={config.cronExpression || ''}
+                            onChange={(e) => updateConfig('cronExpression', e.target.value)}
+                            placeholder="0 9 * * 1 (Every Monday at 9 AM)"
+                        />
+                        <small className="help-text">Format: minute hour day month weekday</small>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Max Executions (Optional)</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={config.maxExecutions || ''}
+                            onChange={(e) => updateConfig('maxExecutions', e.target.value ? Number(e.target.value) : undefined)}
+                            placeholder="Leave blank for unlimited"
+                        />
+                        <small className="help-text">Limit how many times the recurring job runs</small>
+                    </div>
+                </>
             )}
 
             <div className="form-group">

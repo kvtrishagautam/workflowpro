@@ -1,0 +1,205 @@
+/* ─────────────────────────────────────
+   Sticky Note Component
+───────────────────────────────────── */
+
+.sticky-note {
+    position: absolute;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.12);
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+    min-height: 100px;
+    border: 2px solid transparent;
+    pointer-events: auto;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.sticky-note:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sticky-note:hover .sticky-note-toolbar {
+    opacity: 1;
+}
+
+.sticky-note:hover .sticky-note-resize-handle {
+    opacity: 1;
+}
+
+.sticky-note.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25), 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.sticky-note.selected .sticky-note-toolbar {
+    opacity: 1;
+}
+
+.sticky-note.selected .sticky-note-resize-handle {
+    opacity: 1;
+}
+
+.sticky-note.editing {
+    cursor: auto;
+}
+
+/* ─── Toolbar ─── */
+.sticky-note-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 4px 4px 0 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+    min-height: 30px;
+    position: relative;
+}
+
+.sticky-note-toolbar-left {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.sticky-note-btn {
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+    padding: 0;
+    font-size: 14px;
+}
+
+.sticky-note-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.color-indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1.5px solid rgba(0, 0, 0, 0.2);
+    display: block;
+}
+
+.delete-btn {
+    color: #ef4444;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.12);
+}
+
+/* ─── Color Picker ─── */
+.sticky-note-color-picker {
+    position: absolute;
+    top: 30px;
+    left: 0;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    gap: 6px;
+    z-index: 1000;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.color-option {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    padding: 0;
+}
+
+.color-option:hover {
+    transform: scale(1.15);
+}
+
+.color-option.active {
+    border-color: #667eea;
+    transform: scale(1.1);
+}
+
+/* ─── Content ─── */
+.sticky-note-content {
+    flex: 1;
+    padding: 8px 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sticky-note-text {
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #1e293b;
+    flex: 1;
+}
+
+.sticky-note-placeholder {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.sticky-note-textarea {
+    width: 100%;
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #1e293b;
+    font-family: inherit;
+    outline: none;
+    padding: 0;
+    min-height: 60px;
+}
+
+.sticky-note-textarea::placeholder {
+    color: #94a3b8;
+}
+
+/* ─── Resize Handle ─── */
+.sticky-note-resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg,
+            transparent 40%,
+            rgba(0, 0, 0, 0.2) 40%,
+            rgba(0, 0, 0, 0.2) 55%,
+            transparent 55%,
+            transparent 65%,
+            rgba(0, 0, 0, 0.2) 65%,
+            rgba(0, 0, 0, 0.2) 80%,
+            transparent 80%);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    border-radius: 0 0 4px 0;
+}

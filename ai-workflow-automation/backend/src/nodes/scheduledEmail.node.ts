@@ -46,11 +46,23 @@ export const scheduledEmailNode: WorkflowNode = {
                 throw new Error('cronExpression is required for recurring jobs');
             }
 
+            // Normalize recipients: accept comma-separated string or array
+            let recipientsList: string[] = [];
+            if (input.recipients) {
+                if (Array.isArray(input.recipients)) {
+                    recipientsList = input.recipients.map((r: string) => r.trim()).filter(Boolean);
+                } else if (typeof input.recipients === 'string') {
+                    recipientsList = input.recipients.split(',').map((r: string) => r.trim()).filter(Boolean);
+                }
+            }
+
+            console.log(`[ScheduledEmailNode] Recipients (${recipientsList.length}):`, recipientsList);
+
             // Schedule the job
             const job = await jobScheduler.scheduleJob({
                 subject: input.subject,
                 body: input.body,
-                recipients: input.recipients,
+                recipients: recipientsList,
                 recipientGroupId: input.recipientGroupId,
                 scheduledDateTime: input.scheduledDateTime ? new Date(input.scheduledDateTime) : undefined,
                 cronExpression: input.cronExpression,

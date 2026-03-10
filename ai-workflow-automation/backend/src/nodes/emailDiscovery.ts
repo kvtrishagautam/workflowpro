@@ -83,11 +83,17 @@ const VALID_TLDS = new Set([
     'wf', 'ws', 'ye', 'yt', 'za', 'zm', 'zw',
 ]);
 
+// ─── Sub-pages to crawl (only the 4 highest-yield ones) ─────────────────────
+const CONTACT_SUBPAGES = [
+    '/contact', '/contact-us', '/about', '/team',
+];
+
 // ─── Rate Limiting ─────────────────────────────────────────────────────────────
-const RATE_LIMIT_MS = 1500; // 1.5 seconds between requests
-const REQUEST_TIMEOUT_MS = 15000;
-const MAX_RETRIES = 2;
+const RATE_LIMIT_MS = 800; // 0.8s between requests
+const REQUEST_TIMEOUT_MS = 10000; // 10s timeout (not 15)
+const MAX_RETRIES = 1; // Only 1 retry (not 2) — sub-pages shouldn't burn time
 const MAX_REDIRECTS = 5;
+const MAX_URLS_TO_SCRAPE = 60; // Hard cap on total URLs to prevent runaway scraping
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -216,8 +222,12 @@ const fetchWithRetry = async (url: string, retries: number = MAX_RETRIES): Promi
             if (error.message?.includes('robots.txt')) {
                 throw error; // Don't retry robots.txt blocks
             }
+            // Don't retry 4xx errors — the page simply doesn't exist
+            if (error.message?.match(/HTTP (4\d\d)/)) {
+                throw error;
+            }
             if (attempt === retries) throw error;
-            const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s...
+            const delay = Math.pow(2, attempt) * 1000; // 1s, 2s...
             console.log(`[EmailDiscovery] ⏳ Retry ${attempt + 1}/${retries} for ${url} in ${delay}ms`);
             await sleep(delay);
         }
@@ -330,35 +340,42 @@ const searchDuckDuckGo = async (query: string): Promise<string[]> => {
         console.log(`[EmailDiscovery] 🔍 DuckDuckGo search: "${query}"`);
         const html = await fetchURL(searchUrl, false); // Don't check robots for search engine
 
-        // Extract result URLs from DuckDuckGo HTML results
-        const urlRegex = /href="\/\/duckduckgo\.com\/l\/\?uddg=(https?[^&"]+)/g;
         const urls: string[] = [];
         let match;
 
+        // Strategy 1: encoded redirect URLs (most common DDG format)
+        const urlRegex = /href="\/\/duckduckgo\.com\/l\/\?uddg=(https?[^&"]+)/g;
         while ((match = urlRegex.exec(html)) !== null) {
             try {
                 const decodedUrl = decodeURIComponent(match[1]);
-                // Skip DuckDuckGo internal links
-                if (!decodedUrl.includes('duckduckgo.com')) {
-                    urls.push(decodedUrl);
-                }
-            } catch {
-                continue;
+                if (!decodedUrl.includes('duckduckgo.com')) urls.push(decodedUrl);
+            } catch { continue; }
+        }
+
+        // Strategy 2: result__a class links
+        const directUrlRegex = /class="result__a"[^>]*href="(https?:\/\/[^"]+)"/g;
+        while ((match = directUrlRegex.exec(html)) !== null) {
+            if (!match[1].includes('duckduckgo.com')) urls.push(match[1]);
+        }
+
+        // Strategy 3: any absolute https link in result snippets
+        const anyUrlRegex = /class="result__snippet"[^>]*>.*?<a[^>]*href="(https?:\/\/[^"]+)"/g;
+        while ((match = anyUrlRegex.exec(html)) !== null) {
+            if (!match[1].includes('duckduckgo.com')) urls.push(match[1]);
+        }
+
+        // Strategy 4: broad fallback — any https URL that isn't DDG/ads
+        if (urls.length < 5) {
+            const broadRegex = /href="(https?:\/\/(?!duckduckgo\.com|improving\.duckduckgo|duck\.co)[^"]{15,})"/g;
+            while ((match = broadRegex.exec(html)) !== null) {
+                urls.push(match[1]);
             }
         }
 
-        // Also try direct href extraction as fallback
-        if (urls.length === 0) {
-            const directUrlRegex = /class="result__a"[^>]*href="(https?:\/\/[^"]+)"/g;
-            while ((match = directUrlRegex.exec(html)) !== null) {
-                if (!match[1].includes('duckduckgo.com')) {
-                    urls.push(match[1]);
-                }
-            }
-        }
-
-        console.log(`[EmailDiscovery] 🔍 Found ${urls.length} search results`);
-        return urls.slice(0, 10); // Top 10 results
+        // Deduplicate
+        const unique = Array.from(new Set(urls));
+        console.log(`[EmailDiscovery] 🔍 Found ${unique.length} search results`);
+        return unique.slice(0, 20); // Top 20 results (up from 10)
     } catch (error: any) {
         console.error(`[EmailDiscovery] ✗ DuckDuckGo search failed: ${error.message}`);
         return [];
@@ -371,73 +388,156 @@ const searchDuckDuckGo = async (query: string): Promise<string[]> => {
 const searchForPages = async (keywords: string[], industry?: string): Promise<string[]> => {
     const urls: string[] = [];
 
-    // ── 1. Real DuckDuckGo search based on keywords ────────────────────────────
+    // ── 1. Multiple DuckDuckGo search queries for broader coverage ─────────────
+    const queries: string[] = [];
+
     if (keywords.length > 0) {
-        const query = `${keywords.join(' ')} contact email ${industry || ''}`.trim();
-        const searchResults = await searchDuckDuckGo(query);
-        urls.push(...searchResults);
+        queries.push(`${keywords.join(' ')} contact email ${industry || ''}`.trim());
+        queries.push(`${keywords.join(' ')} team staff directory email`);
+        if (industry) {
+            queries.push(`${industry} ${keywords[0]} email address contact page`);
+        }
     } else if (industry) {
-        // Search by industry alone
-        const query = `${industry} companies contact email`;
-        const searchResults = await searchDuckDuckGo(query);
+        queries.push(`${industry} companies contact email`);
+        queries.push(`${industry} organizations staff directory email`);
+        queries.push(`${industry} team members email address`);
+    }
+
+    // Run searches with rate limiting
+    for (let i = 0; i < queries.length; i++) {
+        if (i > 0) await sleep(RATE_LIMIT_MS * 2); // extra delay between searches
+        const searchResults = await searchDuckDuckGo(queries[i]);
         urls.push(...searchResults);
     }
 
-    // ── 2. Fallback: Curated industry URLs ─────────────────────────────────────
+    // ── 2. Extensive curated industry URLs ──────────────────────────────────────
     const commonDomains: Record<string, string[]> = {
         'technology': [
             'https://about.gitlab.com/company/contact/',
             'https://www.mozilla.org/en-US/contact/',
             'https://www.apache.org/foundation/contact.html',
+            'https://www.linuxfoundation.org/about/contact',
+            'https://www.python.org/community/',
+            'https://www.rust-lang.org/governance',
+            'https://nodejs.org/en/about/get-involved',
+            'https://www.djangoproject.com/contact/',
+            'https://www.drupal.org/about/contact',
+            'https://wordpress.org/about/contact/',
+            'https://www.elastic.co/about/contact',
+            'https://www.redhat.com/en/about/contact',
+            'https://www.suse.com/contact/',
+            'https://www.canonical.com/contact-us',
+            'https://www.jetbrains.com/company/contacts/',
         ],
         'education': [
             'https://www.khanacademy.org/about/contact',
             'https://www.edx.org/contact-us',
+            'https://www.coursera.org/about/contact',
+            'https://ocw.mit.edu/contact/',
+            'https://www.harvard.edu/contact',
+            'https://www.stanford.edu/contact/',
+            'https://www.ox.ac.uk/contact-us',
+            'https://www.cam.ac.uk/about-the-university/contact-the-university',
+            'https://www.yale.edu/contact-us',
+            'https://www.columbia.edu/content/contact-columbia',
+            'https://www.princeton.edu/meet-princeton/contact-us',
+            'https://www.uchicago.edu/about/contact/',
+            'https://www.caltech.edu/about/contact-us',
         ],
         'business': [
             'https://www.shopify.com/contact',
             'https://www.salesforce.com/company/contact-us/',
+            'https://www.hubspot.com/company/contact',
+            'https://www.zoho.com/contactus.html',
+            'https://www.freshworks.com/company/contact/',
+            'https://www.zendesk.com/company/contact/',
+            'https://www.intercom.com/company',
+            'https://www.mailchimp.com/contact/',
+            'https://www.atlassian.com/company/contact',
+            'https://www.asana.com/company',
+            'https://www.slack.com/contact',
+            'https://www.notion.so/about',
         ],
         'startup': [
             'https://www.producthunt.com/contact',
             'https://www.ycombinator.com/contact',
+            'https://www.techstars.com/contact',
+            'https://www.500.co/contact',
+            'https://www.crunchbase.com/contact-us',
+            'https://www.seedinvest.com/contact',
+            'https://angel.co/about',
+            'https://www.startupgrind.com/about/',
+            'https://www.plugandplaytechcenter.com/contact/',
+            'https://masschallenge.org/contact',
         ],
         'ngo': [
             'https://www.redcross.org/contact-us.html',
             'https://www.unicef.org/contact-us',
             'https://www.amnesty.org/en/contact/',
+            'https://www.oxfam.org/en/contact-us',
+            'https://www.savethechildren.org/us/about-us/contact-us',
+            'https://www.greenpeace.org/international/explore/about/contacts/',
+            'https://www.wwf.org/about/leadership',
+            'https://www.doctorswithoutborders.org/contact-us',
+            'https://www.habitat.org/about/contact',
+            'https://www.wfp.org/contact',
+            'https://www.care.org/contact/',
+            'https://www.mercy.org.au/contact',
         ],
         'corporate': [
             'https://www.ibm.com/contact/us/en/',
             'https://www.microsoft.com/en-us/contactus/',
             'https://www.oracle.com/corporate/contact/',
+            'https://www.cisco.com/c/en/us/about/contact-cisco.html',
+            'https://www.dell.com/support/contents/en-us/article/contact-information',
+            'https://www.hp.com/us-en/contact-hp.html',
+            'https://www.intel.com/content/www/us/en/support/contact-intel.html',
+            'https://www.accenture.com/us-en/about/contact-us',
+            'https://www.deloitte.com/global/en/about/contact-us.html',
+            'https://www.pwc.com/gx/en/about/contact-us.html',
+            'https://www.ey.com/en_gl/contact-us',
+            'https://www.kpmg.com/xx/en/home/misc/contact.html',
         ],
         'opensource': [
             'https://www.apache.org/foundation/contact.html',
             'https://www.linuxfoundation.org/about/contact',
+            'https://www.fsf.org/about/contact/',
+            'https://www.gnome.org/contact/',
+            'https://kde.org/community/whatiskde/contact/',
+            'https://www.freebsd.org/mailto/',
+            'https://www.openbsd.org/mail.html',
+            'https://www.eclipse.org/org/foundation/contact.php',
+            'https://www.cncf.io/about/contact/',
+            'https://opensourcedesign.net/contact/',
         ],
     };
 
-    // Add industry-specific fallback URLs if DuckDuckGo didn't return enough
-    if (urls.length < 5) {
-        if (industry && commonDomains[industry]) {
-            urls.push(...commonDomains[industry]);
-        }
+    // Always add industry-specific curated URLs
+    if (industry && commonDomains[industry]) {
+        urls.push(...commonDomains[industry]);
+    }
 
-        // Also match keywords to known industries
-        for (const keyword of keywords) {
-            const lowerKeyword = keyword.toLowerCase();
-            if (commonDomains[lowerKeyword]) {
-                urls.push(...commonDomains[lowerKeyword]);
-            }
+    // Match keywords to known industries
+    for (const keyword of keywords) {
+        const lowerKeyword = keyword.toLowerCase();
+        if (commonDomains[lowerKeyword]) {
+            urls.push(...commonDomains[lowerKeyword]);
         }
     }
 
-    // Fallback if still empty
-    if (urls.length === 0) {
+    // If we still have very few URLs, add some general high-yield pages
+    if (urls.length < 10) {
         urls.push(
             'https://www.w3.org/Consortium/contact',
             'https://www.ietf.org/contact/',
+            'https://www.ieee.org/about/contact.html',
+            'https://www.acm.org/about-acm/contact-us',
+            'https://www.mozilla.org/en-US/contact/',
+            'https://www.fsf.org/about/contact/',
+            'https://www.python.org/community/',
+            'https://www.djangoproject.com/contact/',
+            'https://www.linuxfoundation.org/about/contact',
+            'https://www.apache.org/foundation/contact.html',
         );
     }
 
@@ -566,14 +666,64 @@ export const emailDiscoveryNode: WorkflowNode = {
                 };
             }
 
-            console.log(`[EmailDiscovery] 🌐 Scraping ${urlsToScrape.length} URL(s)...`);
+            // ── Expand URLs with sub-page crawling (limited) ────────────────
+            // Only add sub-pages for hosts that DON'T already have a specific path
+            const expandedUrls: string[] = [...urlsToScrape];
+            const scrapedHosts = new Set<string>();
+
+            for (const url of urlsToScrape) {
+                try {
+                    const parsed = new URL(url);
+                    if (!scrapedHosts.has(parsed.host)) {
+                        scrapedHosts.add(parsed.host);
+                        const base = `${parsed.protocol}//${parsed.host}`;
+                        for (const subPage of CONTACT_SUBPAGES) {
+                            const subUrl = `${base}${subPage}`;
+                            // Don't add if we already have this URL
+                            if (!urlsToScrape.includes(subUrl)) {
+                                expandedUrls.push(subUrl);
+                            }
+                        }
+                    }
+                } catch { /* ignore bad URLs */ }
+            }
+
+            // Deduplicate and CAP total URLs
+            urlsToScrape = Array.from(new Set(expandedUrls)).slice(0, MAX_URLS_TO_SCRAPE);
+            console.log(`[EmailDiscovery] 🌐 Scraping ${urlsToScrape.length} URL(s) (capped at ${MAX_URLS_TO_SCRAPE})...`);
 
             // ── Scrape Each URL ────────────────────────────────────────────────
             let successfulScrapes = 0;
             let failedScrapes = 0;
             let blockedByRobots = 0;
+            let consecutiveFailures = 0;
+            const MAX_CONSECUTIVE_FAILURES = 8; // Skip remaining sub-pages of a dead host
+
+            // Stop early once we have enough emails
+            const earlyStopThreshold = maxEmails * 2;
 
             for (let i = 0; i < urlsToScrape.length; i++) {
+                // Early stop if we already have plenty
+                if (discoveredEmails.length >= earlyStopThreshold) {
+                    console.log(`[EmailDiscovery] 🎯 Reached ${discoveredEmails.length} emails (target: ${maxEmails}), stopping early.`);
+                    break;
+                }
+
+                // If too many consecutive failures, skip ahead
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    console.log(`[EmailDiscovery] ⏩ ${consecutiveFailures} consecutive failures, skipping to next host...`);
+                    // Find next URL with a different host
+                    const currentHost = new URL(urlsToScrape[i]).host;
+                    while (i < urlsToScrape.length) {
+                        try {
+                            if (new URL(urlsToScrape[i]).host !== currentHost) break;
+                        } catch {}
+                        i++;
+                    }
+                    consecutiveFailures = 0;
+                    if (i >= urlsToScrape.length) break;
+                }
+
                 const url = urlsToScrape[i];
 
                 // Rate limiting between requests
@@ -589,6 +739,7 @@ export const emailDiscoveryNode: WorkflowNode = {
                     if (emails.length > 0) {
                         console.log(`[EmailDiscovery]   ✓ Found ${emails.length} email(s)`);
                         successfulScrapes++;
+                        consecutiveFailures = 0;
 
                         for (const emailData of emails) {
                             const matchedKeyword = keywords.find((k: string) =>
@@ -602,15 +753,21 @@ export const emailDiscoveryNode: WorkflowNode = {
                         }
                     } else {
                         console.log(`[EmailDiscovery]   ⚠ No emails found on page`);
+                        consecutiveFailures++;
                     }
                 } catch (error: any) {
+                    consecutiveFailures++;
                     if (error.message?.includes('robots.txt')) {
                         blockedByRobots++;
-                        console.log(`[EmailDiscovery]   🚫 Blocked by robots.txt: ${url}`);
+                        if (blockedByRobots <= 3) {
+                            console.log(`[EmailDiscovery]   🚫 Blocked by robots.txt: ${url}`);
+                        }
                         warnings.push(`Skipped ${url} — blocked by robots.txt`);
                     } else {
                         failedScrapes++;
-                        console.error(`[EmailDiscovery]   ✗ Failed: ${error.message}`);
+                        if (failedScrapes <= 5) {
+                            console.error(`[EmailDiscovery]   ✗ Failed: ${error.message}`);
+                        }
                         warnings.push(`Failed to scrape ${url}: ${error.message}`);
                     }
                 }

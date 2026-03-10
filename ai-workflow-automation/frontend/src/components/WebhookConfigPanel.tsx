@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     WebhookConfig,
     WebhookHttpMethod,
@@ -12,6 +12,7 @@ import {
     parseRouteParams,
 } from '../types/nodes/webhook';
 import './WebhookConfigPanel.css';
+import SuccessToast from './SuccessToast';
 
 interface WebhookConfigPanelProps {
     config: Partial<WebhookConfig>;
@@ -116,9 +117,13 @@ const WebhookConfigPanel: React.FC<WebhookConfigPanelProps> = ({
         handleConfigUpdate({ path: normalizedPath });
     };
 
+    const [showToast, setShowToast] = useState(false);
+    const hideToast = useCallback(() => setShowToast(false), []);
+
     const handleSave = () => {
         if (pathError) return;
         onConfigChange(localConfig);
+        setShowToast(true);
     };
 
     const copyToClipboard = (text: string) => {
@@ -480,6 +485,12 @@ const WebhookConfigPanel: React.FC<WebhookConfigPanelProps> = ({
                     Apply Changes
                 </button>
             </div>
+
+            <SuccessToast
+                message="Changes applied successfully!"
+                visible={showToast}
+                onClose={hideToast}
+            />
         </div>
     );
 };

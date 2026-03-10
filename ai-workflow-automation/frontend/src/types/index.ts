@@ -55,12 +55,24 @@ export interface Edge {
     sourceHandle?: string; // for IF/ELSE branching
 }
 
+export type StickyNoteColor = 'yellow' | 'blue' | 'green' | 'pink' | 'purple' | 'orange';
+
+export interface StickyNote {
+    id: string;
+    content: string;
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    color: StickyNoteColor;
+    zIndex?: number;
+}
+
 export interface WorkflowProps {
     id: string;
     name: string;
     description?: string;
     nodes: NodeProps[];
     edges: Edge[];
+    stickyNotes?: StickyNote[];
     createdAt?: string;
     updatedAt?: string;
 }
