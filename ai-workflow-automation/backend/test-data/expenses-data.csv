@@ -1,0 +1,31 @@
+Expense ID,Employee Name,Department,Category,Amount,Date,Merchant,Payment Method,Description
+EX001,Ananya Desai,Engineering,Software License,12000,2026-01-05,JetBrains,Credit Card,IntelliJ IDEA annual license
+EX002,Karan Mehta,Marketing,Travel,8500,2026-01-06,MakeMyTrip,Company Card,Client visit Bangalore
+EX003,Rohan Das,Finance,Office Supplies,1200,2026-01-07,Amazon,Debit Card,Printer cartridges
+EX004,Meera Nair,HR,Training,15000,2026-01-08,Coursera,Credit Card,Leadership course enrollment
+EX005,Arjun Reddy,Engineering,Hardware,35000,2026-01-09,Dell,Company Card,External monitor 27 inch
+EX006,Sara Patel,Marketing,Advertising,22000,2026-01-10,Google Ads,Credit Card,January ad campaign
+EX007,Dev Kapoor,Finance,Meals,800,2026-01-10,Swiggy,Cash,Team lunch
+EX008,Ananya Desai,Engineering,Travel,6200,2026-01-12,Uber,Company Card,Airport pickup for conference
+EX009,Karan Mehta,Marketing,Software License,5400,2026-01-13,Canva,Credit Card,Pro subscription annual
+EX010,Fatima Sheikh,Engineering,Hardware,18000,2026-01-14,Logitech,Debit Card,Ergonomic keyboard and mouse
+EX011,Rohan Das,Finance,Office Supplies,3500,2026-01-15,Staples,Company Card,Filing cabinets
+EX012,Meera Nair,HR,Travel,11000,2026-01-16,IRCTC,Credit Card,Recruitment drive Delhi
+EX013,Arjun Reddy,Engineering,Software License,8000,2026-01-18,GitHub,Company Card,Enterprise plan upgrade
+EX014,Sara Patel,Marketing,Advertising,45000,2026-01-19,Meta Ads,Credit Card,Facebook campaign Q1
+EX015,Dev Kapoor,Finance,Training,7500,2026-01-20,Udemy,Debit Card,Advanced Excel certification
+EX016,Ananya Desai,Engineering,Meals,1500,2026-01-21,Zomato,Cash,Sprint review dinner
+EX017,Karan Mehta,Marketing,Travel,9800,2026-01-22,Cleartrip,Company Card,Trade show Mumbai
+EX018,Fatima Sheikh,Engineering,Hardware,42000,2026-01-23,Apple,Credit Card,MacBook charger and accessories
+EX019,Rohan Das,Finance,Office Supplies,2800,2026-01-24,OfficeMax,Debit Card,Whiteboard markers and supplies
+EX020,Meera Nair,HR,Meals,2200,2026-01-25,Barbeque Nation,Company Card,New hire welcome lunch
+EX021,Arjun Reddy,Engineering,Travel,14000,2026-01-26,MakeMyTrip,Credit Card,DevOps conference Pune
+EX022,Sara Patel,Marketing,Software License,9600,2026-01-27,HubSpot,Company Card,Marketing automation tool
+EX023,Dev Kapoor,Finance,Office Supplies,1800,2026-01-28,Amazon,Cash,Calculator and stationery
+EX024,Ananya Desai,Engineering,Training,20000,2026-01-29,AWS,Credit Card,Cloud certification program
+EX025,Karan Mehta,Marketing,Advertising,30000,2026-01-30,LinkedIn Ads,Company Card,Sponsored posts February
+EX026,Fatima Sheikh,Engineering,Meals,950,2026-02-01,Dominos,Debit Card,Hackathon pizza order
+EX027,Rohan Das,Finance,Travel,5600,2026-02-02,Ola,Company Card,Audit visit client office
+EX028,Meera Nair,HR,Training,12000,2026-02-03,LinkedIn Learning,Credit Card,Team annual subscription
+EX029,Arjun Reddy,Engineering,Hardware,28000,2026-02-04,Samsung,Company Card,Portable SSD 2TB
+EX030,Sara Patel,Marketing,Meals,3200,2026-02-05,Taj Hotel,Credit Card,Client entertainment dinner
