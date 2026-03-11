@@ -588,6 +588,7 @@ const Editor: React.FC = () => {
                         {lastSaved && <span className="last-saved">Last saved: {lastSaved}</span>}
                     </div>
 
+                    {/* COMMENTED OUT: Import button
                     <button
                         className="import-button"
                         onClick={handleImportWorkflow}
@@ -595,6 +596,7 @@ const Editor: React.FC = () => {
                     >
                         📂 Import
                     </button>
+                    */}
 
                     <button
                         className="run-button"

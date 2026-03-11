@@ -114,6 +114,7 @@
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
+/* COMMENTED OUT: Import button styles
 .import-button {
     background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
     color: white;
@@ -135,6 +136,7 @@
 .import-button:active {
     transform: translateY(0);
 }
+*/
 
 .run-button {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
