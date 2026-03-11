@@ -9,8 +9,13 @@ interface WorkflowNodeComponentProps {
     onSelect: (nodeId: string) => void;
     onDelete: (nodeId: string) => void;
     onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
+<<<<<<< HEAD
     onConnectorMouseDown: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', handle?: string) => void;
     onConnectorMouseUp: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', handle?: string) => void;
+=======
+    onConnectorMouseDown: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', sourceHandle?: string) => void;
+    onConnectorMouseUp: (e: React.MouseEvent, nodeId: string, connectorType: 'input' | 'output', sourceHandle?: string) => void;
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
     onUpdate?: (nodeId: string, updatedNode: NodeProps) => void;
     onOpenWebhookConfig?: (node: NodeProps) => void;
     onOpenNodeConfig?: (node: NodeProps) => void;
@@ -383,7 +388,12 @@ const WorkflowNode: React.FC<WorkflowNodeComponentProps> = ({
                     onConnectorMouseUp(e, node.id, 'input');
                 }}
             />
+<<<<<<< HEAD
             {/* Conditional nodes have TRUE (right) / FALSE (bottom) outputs */}
+=======
+
+            {/* Conditional nodes have TRUE/FALSE outputs */}
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
             {node.type === NODE_TYPES.CONDITIONAL ? (
                 <>
                     <div

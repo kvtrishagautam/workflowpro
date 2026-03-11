@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Workflow } from '../types';
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────────────────────
 // Axios-based API client (newbr) — used for auth & workflow CRUD
 // ─────────────────────────────────────────────────────────────
@@ -61,6 +62,8 @@ export default api;
 // email scheduling, job management, and health checks
 // ─────────────────────────────────────────────────────────────
 
+=======
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
 const API_BASE_URL = 'http://localhost:4000';
 
 export interface NodeSchema {
@@ -109,13 +112,73 @@ class ApiService {
     async executeWorkflow(workflow: Workflow): Promise<WorkflowExecutionResult> {
         try {
             const backendWorkflow = {
-                nodes: workflow.nodes.map(node => ({
-                    id: node.id,
-                    type: this.mapNodeTypeToBackend(node.type),
-                    input: node.data.config || {}
-                })),
+                nodes: workflow.nodes.map(node => {
+                    const rawConfig = { ...(node.data.config || {}) };
+
+                    // For email-sending nodes, pack flat SMTP credential fields
+                    // into the nested smtpConfig object the backend expects.
+                    // The Credentials tab stores: smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom
+                    if (node.type === 'emailSending') {
+                        const hasSmtpCreds = rawConfig.smtpHost || rawConfig.smtpUser || rawConfig.smtpPassword;
+                        if (hasSmtpCreds) {
+                            // Auto-infer host from email domain if user didn't provide one
+                            let smtpHost = rawConfig.smtpHost || '';
+                            if (!smtpHost && rawConfig.smtpUser && rawConfig.smtpUser.includes('@')) {
+                                const domain = rawConfig.smtpUser.split('@')[1];
+                                if (domain === 'gmail.com') smtpHost = 'smtp.gmail.com';
+                                else if (['outlook.com', 'hotmail.com', 'live.com'].includes(domain)) smtpHost = 'smtp-mail.outlook.com';
+                                else if (['yahoo.com', 'ymail.com'].includes(domain)) smtpHost = 'smtp.mail.yahoo.com';
+                                else smtpHost = `smtp.${domain}`;
+                                console.log(`[API] Auto-inferred SMTP host: ${smtpHost}`);
+                            }
+                            rawConfig.smtpConfig = {
+                                host: smtpHost,
+                                port: Number(rawConfig.smtpPort) || 587,
+                                user: rawConfig.smtpUser || '',
+                                pass: rawConfig.smtpPassword || '',
+                                from: rawConfig.smtpFrom || undefined,
+                            };
+                            console.log('[API] Packed smtpConfig for emailSending node:', {
+                                host: rawConfig.smtpConfig.host,
+                                port: rawConfig.smtpConfig.port,
+                                user: rawConfig.smtpConfig.user,
+                                hasPass: !!rawConfig.smtpConfig.pass,
+                            });
+                        } else {
+                            console.warn('[API] emailSending node has NO SMTP credentials in config. Keys present:', Object.keys(rawConfig));
+                        }
+                        // Always remove flat keys — backend uses the nested smtpConfig
+                        delete rawConfig.smtpHost;
+                        delete rawConfig.smtpPort;
+                        delete rawConfig.smtpUser;
+                        delete rawConfig.smtpPassword;
+                        delete rawConfig.smtpFrom;
+                    }
+
+                    // For scheduled-email nodes, ensure recipients is an array
+                    if (node.type === 'scheduledEmail') {
+                        if (rawConfig.recipients && typeof rawConfig.recipients === 'string') {
+                            rawConfig.recipients = rawConfig.recipients
+                                .split(',')
+                                .map((r: string) => r.trim())
+                                .filter(Boolean);
+                        }
+                        // Convert maxExecutions to number if present
+                        if (rawConfig.maxExecutions) {
+                            rawConfig.maxExecutions = Number(rawConfig.maxExecutions);
+                        }
+                    }
+
+                    return {
+                        id: node.id,
+                        type: this.mapNodeTypeToBackend(node.type),
+                        input: rawConfig,
+                    };
+                }),
                 edges: workflow.edges
             };
+
+            console.log('[API] Outgoing workflow payload:', JSON.stringify(backendWorkflow, null, 2));
 
             const response = await fetch(`${API_BASE_URL}/api/workflows/execute`, {
                 method: 'POST',

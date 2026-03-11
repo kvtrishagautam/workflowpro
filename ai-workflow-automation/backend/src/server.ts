@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import webhookRoutes from './routes/webhookRoutes';
+<<<<<<< HEAD
 import authRoutes from './routes/auth.routes';
 import workflowRoutes from './routes/workflow.routes';
 import { connectDatabase } from './config/database';
@@ -14,6 +15,9 @@ try {
 } catch {
     // proxyRoutes not available in this environment
 }
+=======
+import proxyRoutes from './routes/proxyRoutes';
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
 
 const app = express();
 const PORT = config.port;
@@ -31,6 +35,7 @@ app.use((req, res, next) => {
 });
 
 // Routes
+<<<<<<< HEAD
 app.use('/api/auth', authRoutes);
 // Mount workflow management routes first
 app.use('/api/workflows', workflowRoutes);
@@ -41,6 +46,10 @@ app.use('/api', webhookRoutes);
 if (proxyRoutes) {
     app.use(proxyRoutes);
 }
+=======
+app.use(webhookRoutes);
+app.use(proxyRoutes);
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
 
 // 404 handler
 app.use((req, res) => {

@@ -1,6 +1,8 @@
-import React, { useRef, useState } from 'react';
-import { Workflow, NodeProps } from '../types';
+import React, { useRef, useState, useCallback } from 'react';
+import { Workflow, NodeProps, StickyNote as StickyNoteType } from '../types';
 import WorkflowNode from './WorkflowNode';
+import StickyNote from './StickyNote';
+import MiniMap from './MiniMap';
 import './Canvas.css';
 
 type CanvasProps = {
@@ -17,6 +19,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStart, setConnectionStart] = useState<{ nodeId: string; handle?: string } | null>(null);
+    const [connectionStartHandle, setConnectionStartHandle] = useState<string | undefined>(undefined);
     const [connectionEnd, setConnectionEnd] = useState<{ x: number; y: number } | null>(null);
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -87,18 +90,42 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
         setPan({ x: panX, y: panY });
     };
 
+    // Sticky note state
+    const [selectedStickyNoteId, setSelectedStickyNoteId] = useState<string | null>(null);
+    const [draggedStickyNote, setDraggedStickyNote] = useState<string | null>(null);
+    const [stickyNoteOffset, setStickyNoteOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    // Refs for keyboard-accessible handlers (avoid stale closures in keydown effect)
+    const handleStickyNoteDeleteRef = useRef<(noteId: string) => void>(() => { });
+    const addStickyNoteRef = useRef<() => void>(() => { });
+
     // Keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === ' ') {
+            const el = document.activeElement;
+            const isTyping = el?.tagName === 'INPUT' ||
+                el?.tagName === 'TEXTAREA' ||
+                el?.tagName === 'SELECT' ||
+                (el && 'isContentEditable' in el && el.isContentEditable) ||
+                el?.closest?.('.node-config-panel') !== null;
+
+            if (e.key === ' ' && !isTyping) {
                 e.preventDefault();
                 setSpacePressed(true);
             }
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedEdge) {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && !isTyping) {
+                if (selectedStickyNoteId && !selectedEdge) {
+                    e.preventDefault();
+                    handleStickyNoteDeleteRef.current(selectedStickyNoteId);
+                } else if (selectedEdge) {
                     e.preventDefault();
                     handleEdgeDelete(selectedEdge);
                 }
+            }
+            // Shift+S — add sticky note
+            if (e.key === 'S' && e.shiftKey && !e.ctrlKey && !e.altKey && !isTyping) {
+                e.preventDefault();
+                addStickyNoteRef.current();
             }
         };
 
@@ -116,7 +143,31 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [selectedEdge]);
+    }, [selectedEdge, selectedStickyNoteId]);
+
+    // ─── Sticky Note Handlers (must be before early return) ───────────────
+    const addStickyNote = useCallback(() => {
+        if (!workflow) return;
+        const canvas = canvasRef.current;
+        const stickyNotes = workflow.stickyNotes || [];
+        const rect = canvas?.getBoundingClientRect();
+        const cw = rect?.width || 800;
+        const ch = rect?.height || 600;
+        const x = (cw / 2 - pan.x) / zoom - 100;
+        const y = (ch / 2 - pan.y) / zoom - 75;
+        const newNote: StickyNoteType = {
+            id: `sticky_${Date.now()}`,
+            content: '',
+            position: { x: Math.max(0, x), y: Math.max(0, y) },
+            size: { width: 200, height: 150 },
+            color: 'yellow',
+            zIndex: stickyNotes.length + 1,
+        };
+        onWorkflowChange?.({ ...workflow, stickyNotes: [...stickyNotes, newNote] });
+        setSelectedStickyNoteId(newNote.id);
+    }, [workflow, pan, zoom, onWorkflowChange]);
+
+    addStickyNoteRef.current = addStickyNote;
 
     if (!workflow) {
         return <div className="canvas empty">No workflow loaded</div>;
@@ -181,6 +232,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
         if (connectorType === 'output') {
             setIsConnecting(true);
             setConnectionStart({ nodeId, handle });
+            setConnectionStartHandle(handle);
 
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -221,7 +273,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     id: `edge_${Date.now()}`,
                     source: connectionStart.nodeId,
                     target: nodeId,
-                    sourceHandle: connectionStart.handle,
+                    sourceHandle: connectionStart.handle || connectionStartHandle,
                 };
 
                 const updated = {
@@ -235,6 +287,7 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
         setIsConnecting(false);
         setConnectionStart(null);
+        setConnectionStartHandle(undefined);
         setConnectionEnd(null);
     };
 
@@ -281,6 +334,23 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
     };
 
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
+        // Handle sticky note dragging
+        if (draggedStickyNote && e.buttons === 1 && !spacePressed) {
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+                const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+                const updatedNotes = (workflow.stickyNotes || []).map((n) =>
+                    n.id === draggedStickyNote
+                        ? { ...n, position: { x: Math.max(0, mouseX - stickyNoteOffset.x), y: Math.max(0, mouseY - stickyNoteOffset.y) } }
+                        : n
+                );
+                onWorkflowChange?.({ ...workflow, stickyNotes: updatedNotes });
+            }
+            return;
+        }
+
         // Handle canvas panning (with space or middle mouse button)
         if (isPanning && panStart && (spacePressed || e.buttons === 4)) {
             const dx = e.clientX - panStart.x;
@@ -337,8 +407,10 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
 
     const handleCanvasMouseUp = () => {
         setDraggedNode(null);
+        setDraggedStickyNote(null);
         setIsConnecting(false);
         setConnectionStart(null);
+        setConnectionStartHandle(undefined);
         setConnectionEnd(null);
         setIsPanning(false);
         setPanStart(null);
@@ -351,8 +423,9 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
             setIsPanning(true);
             setPanStart({ x: e.clientX, y: e.clientY });
         } else {
-            // Deselect edge when clicking on empty canvas
+            // Deselect edge and sticky note when clicking on empty canvas
             setSelectedEdge(null);
+            setSelectedStickyNoteId(null);
         }
     };
 
@@ -403,6 +476,40 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
         onWorkflowChange?.(updated);
     };
 
+    // ─── Sticky Note Handlers (moved before early return for React hooks rules) ───
+    const handleStickyNoteSelect = (noteId: string) => {
+        setSelectedStickyNoteId(noteId);
+        setSelectedNodeId(null);
+        setSelectedEdge(null);
+    };
+
+    const handleStickyNoteUpdate = (updatedNote: StickyNoteType) => {
+        const updatedNotes = (workflow.stickyNotes || []).map((n) =>
+            n.id === updatedNote.id ? updatedNote : n
+        );
+        onWorkflowChange?.({ ...workflow, stickyNotes: updatedNotes });
+    };
+
+    const handleStickyNoteDelete = (noteId: string) => {
+        const updatedNotes = (workflow.stickyNotes || []).filter((n) => n.id !== noteId);
+        onWorkflowChange?.({ ...workflow, stickyNotes: updatedNotes });
+        setSelectedStickyNoteId(null);
+    };
+
+    handleStickyNoteDeleteRef.current = handleStickyNoteDelete;
+
+    const handleStickyNoteDragStart = (e: React.MouseEvent, noteId: string) => {
+        const note = (workflow.stickyNotes || []).find((n) => n.id === noteId);
+        if (!note) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+        const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+        setDraggedStickyNote(noteId);
+        setStickyNoteOffset({ x: mouseX - note.position.x, y: mouseY - note.position.y });
+    };
+
     return (
         <div
             className={`canvas ${spacePressed ? 'panning-mode' : ''}`}
@@ -431,6 +538,22 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     left: 0,
                 }}
             >
+                {/* Sticky Notes Layer (behind nodes) */}
+                <div className="sticky-notes-layer">
+                    {(workflow.stickyNotes || []).map((note) => (
+                        <StickyNote
+                            key={note.id}
+                            note={note}
+                            zoom={zoom}
+                            isSelected={selectedStickyNoteId === note.id}
+                            onSelect={handleStickyNoteSelect}
+                            onUpdate={handleStickyNoteUpdate}
+                            onDelete={handleStickyNoteDelete}
+                            onDragStart={handleStickyNoteDragStart}
+                        />
+                    ))}
+                </div>
+
                 {/* Nodes */}
                 <div className="nodes-layer">
                     {workflow.nodes.map((node) => (
@@ -514,13 +637,14 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         const targetDims = getNodeDimensions(targetNode.id);
 
                         // Calculate connection points
-                        // Handle conditional nodes: TRUE connector on right side, FALSE at bottom
+                        // Handle conditional nodes with TRUE (right) and FALSE (bottom) outputs
                         let x1, y1;
                         if (sourceNode.type === 'conditional' && edge.sourceHandle === 'true') {
                             // TRUE connector is on the right side
                             x1 = sourceNode.position.x + sourceDims.width;
                             y1 = sourceNode.position.y + sourceDims.height / 2;
                         } else {
+                            // Standard output connector at bottom center (also handles FALSE for conditional)
                             x1 = sourceNode.position.x + sourceDims.width / 2;
                             y1 = sourceNode.position.y + sourceDims.height;
                         }
@@ -591,14 +715,19 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                         if (!sourceNode) return null;
 
                         const sourceDims = getNodeDimensions(sourceNode.id);
+                        // Check if connecting from conditional TRUE connector (right side)
+                        // We'll determine this based on mouse position relative to node
+                        const isRightSide = connectionEnd.x > sourceNode.position.x + sourceDims.width / 2;
+                        const isConditional = sourceNode.type === 'conditional';
 
-                        // Calculate start position based on handle type
                         let x1, y1;
-                        if (sourceNode.type === 'conditional' && connectionStart.handle === 'true') {
+                        if ((isConditional && isRightSide) || (sourceNode.type === 'conditional' && connectionStart.handle === 'true')) {
                             // TRUE connector on right side
                             x1 = sourceNode.position.x + sourceDims.width;
                             y1 = sourceNode.position.y + sourceDims.height / 2;
                         } else {
+                            // Standard or FALSE connector at bottom
+
                             x1 = sourceNode.position.x + sourceDims.width / 2;
                             y1 = sourceNode.position.y + sourceDims.height;
                         }
@@ -637,6 +766,30 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     })()}
                 </svg>
             </div>
+
+            {/* Add Sticky Note Button */}
+            <button
+                className="add-sticky-note-btn"
+                onClick={addStickyNote}
+                title="Add Sticky Note (Shift+S)"
+            >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
+                </svg>
+                <span className="tooltip">Add Sticky Note <kbd>Shift+S</kbd></span>
+            </button>
+
+            {/* MiniMap */}
+            <MiniMap
+                workflow={workflow}
+                zoom={zoom}
+                pan={pan}
+                canvasSize={{
+                    width: canvasRef.current?.clientWidth || 800,
+                    height: canvasRef.current?.clientHeight || 600,
+                }}
+                onPanChange={setPan}
+            />
 
             {/* Empty State */}
             {workflow.nodes.length === 0 && (
@@ -725,6 +878,12 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                     <span className="info-label">Connections:</span>
                     <span className="info-value">{workflow.edges.length}</span>
                 </div>
+                {(workflow.stickyNotes?.length || 0) > 0 && (
+                    <div className="info-item">
+                        <span className="info-label">Notes:</span>
+                        <span className="info-value">{workflow.stickyNotes?.length || 0}</span>
+                    </div>
+                )}
             </div>
 
             {/* Keyboard Shortcuts Hint */}
@@ -735,9 +894,17 @@ const Canvas: React.FC<CanvasProps> = ({ workflow, onWorkflowChange, onOpenWebho
                 <div className="hint-item">
                     <kbd>Scroll</kbd> to Zoom
                 </div>
+                <div className="hint-item">
+                    <kbd>Shift+S</kbd> Sticky Note
+                </div>
                 {selectedEdge && (
                     <div className="hint-item highlight">
                         <kbd>Del</kbd> to Delete Connection
+                    </div>
+                )}
+                {selectedStickyNoteId && !selectedEdge && (
+                    <div className="hint-item highlight">
+                        <kbd>Del</kbd> to Delete Note
                     </div>
                 )}
             </div>

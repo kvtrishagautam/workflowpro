@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NodeProps, NODE_TYPES } from '../types';
 import './NodeConfigPanel.css';
 import { DashboardPortalConfig } from './DashboardPortalConfig';
+import SuccessToast from './SuccessToast';
 
 interface NodeConfigPanelProps {
     node: NodeProps;
@@ -55,113 +56,112 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onConfigChange,
         setConfig(newConfig);
     };
 
+    const [showToast, setShowToast] = useState(false);
+    const hideToast = useCallback(() => setShowToast(false), []);
+
     const handleSave = () => {
         onConfigChange(node.id, config);
-        onClose();
+        setShowToast(true);
+        // Wait for user to close or let it auto-close (in the actual component, if we want it to stay open we remove onClose)
     };
+        case NODE_TYPES.DATA_CLEANER:
+return <DataCleanerConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.ANALYSIS_ENGINE:
+return <AnalysisEngineConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.MDB_STORAGE:
+return <MongoDbStorageConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.EMAIL:
+return <EmailConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.EMAIL_DISCOVERY:
+return <EmailDiscoveryConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.EMAIL_SENDING:
+return <EmailSendingConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.SCHEDULED_EMAIL:
+return <ScheduledEmailConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.WHATSAPP:
+return <WhatsAppConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.TELEGRAM:
+return <TelegramConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.DISCORD:
+return <DiscordConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.SLACK:
+return <SlackConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.GOOGLE_SHEETS:
+return <GoogleSheetsConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.AIRTABLE:
+return <AirtableConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.NOTION:
+return <NotionConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.MYSQL:
+        case NODE_TYPES.POSTGRES:
+return <DatabaseConfig config={config} updateConfig={updateConfig} nodeType={node.type} />;
+        case NODE_TYPES.OPENAI:
+return <OpenAIConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.SET:
+return <SetConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.FILTER:
+return <FilterConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.MERGE:
+return <MergeConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.SPLIT_BATCHES:
+return <SplitBatchesConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.HTTP:
+return <HTTPConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.CONDITIONAL:
+return <ConditionalConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.DELAY:
+return <DelayConfig config={config} updateConfig={updateConfig} />;
+        case NODE_TYPES.JAVASCRIPT:
+return <JavaScriptConfig config={config} updateConfig={updateConfig} />;
+        default:
+return <GenericConfig config={config} updateConfig={updateConfig} />;
+    }
+};
 
-    const metadata = nodeMetadata[node.type] || { icon: '⚙️', label: 'Node', color: '#64748b' };
-
-    const renderConfigFields = () => {
-        switch (node.type) {
-            case NODE_TYPES.DASHBOARD_PORTAL:
-                return <DashboardPortalConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.SCHEDULE:
-                return <ScheduleConfig config={config} updateConfig={updateConfig} updateConfigBatch={updateConfigBatch} />;
-            case NODE_TYPES.CSV_READ:
-                return <CSVReadConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.DATA_CLEANER:
-                return <DataCleanerConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.ANALYSIS_ENGINE:
-                return <AnalysisEngineConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.MDB_STORAGE:
-                return <MongoDbStorageConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.EMAIL:
-                return <EmailConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.EMAIL_DISCOVERY:
-                return <EmailDiscoveryConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.EMAIL_SENDING:
-                return <EmailSendingConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.SCHEDULED_EMAIL:
-                return <ScheduledEmailConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.WHATSAPP:
-                return <WhatsAppConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.TELEGRAM:
-                return <TelegramConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.DISCORD:
-                return <DiscordConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.SLACK:
-                return <SlackConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.GOOGLE_SHEETS:
-                return <GoogleSheetsConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.AIRTABLE:
-                return <AirtableConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.NOTION:
-                return <NotionConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.MYSQL:
-            case NODE_TYPES.POSTGRES:
-                return <DatabaseConfig config={config} updateConfig={updateConfig} nodeType={node.type} />;
-            case NODE_TYPES.OPENAI:
-                return <OpenAIConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.SET:
-                return <SetConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.FILTER:
-                return <FilterConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.MERGE:
-                return <MergeConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.SPLIT_BATCHES:
-                return <SplitBatchesConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.HTTP:
-                return <HTTPConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.CONDITIONAL:
-                return <ConditionalConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.DELAY:
-                return <DelayConfig config={config} updateConfig={updateConfig} />;
-            case NODE_TYPES.JAVASCRIPT:
-                return <JavaScriptConfig config={config} updateConfig={updateConfig} />;
-            default:
-                return <GenericConfig config={config} updateConfig={updateConfig} />;
-        }
-    };
-
-    return (
-        <div className="node-config-panel">
-            <div className="config-header" style={{ borderBottomColor: metadata.color }}>
-                <div className="header-title">
-                    <span className="header-icon">{metadata.icon}</span>
-                    <span className="header-label">{metadata.label}</span>
-                </div>
-                <button className="close-btn" onClick={onClose}>×</button>
+return (
+    <div className="node-config-panel" onKeyDown={(e) => e.stopPropagation()}>
+        <div className="config-header" style={{ borderBottomColor: metadata.color }}>
+            <div className="header-title">
+                <span className="header-icon">{metadata.icon}</span>
+                <span className="header-label">{metadata.label}</span>
             </div>
-
-            <div className="config-tabs">
-                <button
-                    className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('settings')}
-                >
-                    Settings
-                </button>
-                <button
-                    className={`tab-btn ${activeTab === 'credentials' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('credentials')}
-                >
-                    Credentials
-                </button>
-            </div>
-
-            <div className="config-content">
-                {activeTab === 'settings' && renderConfigFields()}
-                {activeTab === 'credentials' && (
-                    <CredentialsTab config={config} updateConfig={updateConfig} nodeType={node.type} />
-                )}
-            </div>
-
-            <div className="config-footer">
-                <button className="btn-secondary" onClick={onClose}>Close</button>
-                <button className="btn-primary" onClick={handleSave}>Apply Changes</button>
-            </div>
+            <button className="close-btn" onClick={onClose}>×</button>
         </div>
-    );
+
+        <div className="config-tabs">
+            <button
+                className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('settings')}
+            >
+                Settings
+            </button>
+            <button
+                className={`tab-btn ${activeTab === 'credentials' ? 'active' : ''}`}
+                onClick={() => setActiveTab('credentials')}
+            >
+                Credentials
+            </button>
+        </div>
+
+        <div className="config-content">
+            {activeTab === 'settings' && renderConfigFields()}
+            {activeTab === 'credentials' && (
+                <CredentialsTab config={config} updateConfig={updateConfig} nodeType={node.type} />
+            )}
+        </div>
+
+        <div className="config-footer">
+            <button className="btn-secondary" onClick={onClose}>Close</button>
+            <button className="btn-primary" onClick={handleSave}>Apply Changes</button>
+        </div>
+
+        <SuccessToast
+            message="Changes applied successfully!"
+            visible={showToast}
+            onClose={hideToast}
+        />
+    </div>
+);
 };
 
 // ============================================
@@ -2024,6 +2024,14 @@ function getCredentialFields(nodeType: string): { key: string; label: string; ty
                 { key: 'smtpUser', label: 'SMTP Username' },
                 { key: 'smtpPassword', label: 'SMTP Password', type: 'password' },
             ];
+        case NODE_TYPES.EMAIL_SENDING:
+            return [
+                { key: 'smtpHost', label: 'SMTP Host', placeholder: 'smtp.gmail.com', helpText: 'Your outgoing mail server address' },
+                { key: 'smtpPort', label: 'SMTP Port', placeholder: '587', helpText: 'Usually 587 (TLS) or 465 (SSL)' },
+                { key: 'smtpUser', label: 'SMTP Username / Email', placeholder: 'you@gmail.com', helpText: 'The email address used to authenticate' },
+                { key: 'smtpPassword', label: 'SMTP Password', type: 'password', placeholder: 'App password or SMTP password', helpText: 'For Gmail use an App Password (16 chars)' },
+                { key: 'smtpFrom', label: 'From Address (optional)', placeholder: '"My Name" <me@gmail.com>', helpText: 'Defaults to SMTP username if left empty' },
+            ];
         default:
             return [];
     }
@@ -2208,16 +2216,30 @@ const ScheduledEmailConfig: React.FC<ConfigProps> = ({ config, updateConfig }) =
             )}
 
             {config.scheduleType === 'recurring' && (
-                <div className="form-group">
-                    <label>Cron Expression</label>
-                    <input
-                        type="text"
-                        value={config.cronExpression || ''}
-                        onChange={(e) => updateConfig('cronExpression', e.target.value)}
-                        placeholder="0 9 * * 1 (Every Monday at 9 AM)"
-                    />
-                    <small className="help-text">Format: minute hour day month weekday</small>
-                </div>
+                <>
+                    <div className="form-group">
+                        <label>Cron Expression</label>
+                        <input
+                            type="text"
+                            value={config.cronExpression || ''}
+                            onChange={(e) => updateConfig('cronExpression', e.target.value)}
+                            placeholder="0 9 * * 1 (Every Monday at 9 AM)"
+                        />
+                        <small className="help-text">Format: minute hour day month weekday</small>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Max Executions (Optional)</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={config.maxExecutions || ''}
+                            onChange={(e) => updateConfig('maxExecutions', e.target.value ? Number(e.target.value) : undefined)}
+                            placeholder="Leave blank for unlimited"
+                        />
+                        <small className="help-text">Limit how many times the recurring job runs</small>
+                    </div>
+                </>
             )}
 
             <div className="form-group">

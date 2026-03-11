@@ -270,6 +270,63 @@ app.post('/api/workflows/execute', async (req, res) => {
 });
 
 // Scheduled Jobs API Endpoints
+
+// Create a new scheduled job via REST (outside of workflow execution)
+app.post('/api/scheduled-jobs', async (req, res) => {
+    try {
+        const { subject, body, recipients, recipientGroupId, scheduledDateTime, cronExpression, scheduleType, personalizationCSV, maxExecutions } = req.body;
+
+        if (!subject || !body) {
+            return res.status(400).json({ error: 'subject and body are required' });
+        }
+        if (!recipients && !recipientGroupId) {
+            return res.status(400).json({ error: 'Either recipients or recipientGroupId must be provided' });
+        }
+        if (scheduleType === 'one-time' && !scheduledDateTime) {
+            return res.status(400).json({ error: 'scheduledDateTime is required for one-time jobs' });
+        }
+        if (scheduleType === 'recurring' && !cronExpression) {
+            return res.status(400).json({ error: 'cronExpression is required for recurring jobs' });
+        }
+
+        // Normalize recipients: accept comma-separated string or array
+        let recipientsList: string[] = [];
+        if (recipients) {
+            if (Array.isArray(recipients)) {
+                recipientsList = recipients.map((r: string) => r.trim()).filter(Boolean);
+            } else if (typeof recipients === 'string') {
+                recipientsList = recipients.split(',').map((r: string) => r.trim()).filter(Boolean);
+            }
+        }
+
+        const job = await jobScheduler.scheduleJob({
+            subject,
+            body,
+            recipients: recipientsList,
+            recipientGroupId,
+            scheduledDateTime: scheduledDateTime ? new Date(scheduledDateTime) : undefined,
+            cronExpression,
+            scheduleType: scheduleType || 'one-time',
+            personalizationCSV,
+            maxExecutions: maxExecutions ? Number(maxExecutions) : undefined,
+        });
+
+        res.status(201).json({
+            message: 'Job scheduled successfully',
+            job: {
+                jobId: job._id.toString(),
+                status: job.status,
+                scheduleType: job.scheduleType,
+                scheduledFor: job.scheduledDateTime?.toISOString() || job.cronExpression,
+                recipients: recipientsList,
+            }
+        });
+    } catch (error: any) {
+        console.error('Error creating scheduled job:', error);
+        res.status(500).json({ error: error.message || 'Failed to create scheduled job' });
+    }
+});
+
 app.get('/api/scheduled-jobs', async (req, res) => {
     try {
         const { status } = req.query;

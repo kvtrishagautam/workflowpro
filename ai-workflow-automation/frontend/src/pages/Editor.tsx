@@ -4,14 +4,17 @@ import NodePalette from '../components/NodePalette';
 import RunHistory from '../components/RunHistory';
 import WebhookConfigPanel from '../components/WebhookConfigPanel';
 import NodeConfigPanel from '../components/NodeConfigPanel';
-import { Workflow, NodeProps, NODE_TYPES } from '../types';
+import { Workflow, NodeProps, NODE_TYPES, NodeTypeValue } from '../types';
 import { WebhookConfig, DEFAULT_WEBHOOK_CONFIG } from '../types/nodes/webhook';
-import { executeWorkflow } from '../engine/executeWorkflow';
+import { executeWorkflow as executeWorkflowInBrowser } from '../engine/executeWorkflow';
 import { resumeDelayedRuns } from '../engine/resumeDelayedRuns';
 import Modal from '../components/Modal';
+import { createRun, updateRun } from '../store/runStore';
+import { WorkflowRun } from '../types/run';
+import { LayoutDashboard } from 'lucide-react';
 import './Editor.css';
 
-const Editor: React.FC = () => {
+const Editor: React.FC<{}> = (): React.ReactElement => {
 
     const [workflow, setWorkflow] = useState<Workflow>({
         id: `workflow_${Date.now()}`,
@@ -19,6 +22,7 @@ const Editor: React.FC = () => {
         description: '',
         nodes: [],
         edges: [],
+        stickyNotes: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     });
@@ -48,11 +52,11 @@ const Editor: React.FC = () => {
         type: 'info',
     });
 
-    const showModal = (title: string, content: React.ReactNode, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+    const showModal = (title: string, content: React.ReactNode, type: 'info' | 'success' | 'error' | 'warning' = 'info'): void => {
         setModalConfig({ isOpen: true, title, content, type });
     };
 
-    const closeModal = () => {
+    const closeModal = (): void => {
         setModalConfig({ ...modalConfig, isOpen: false });
     };
 
@@ -360,6 +364,13 @@ const Editor: React.FC = () => {
                 setWorkflow(prev => ({ ...prev, id: response.workflowId }));
             }
 
+            // Log webhook URLs if any
+            if (response.webhooks && response.webhooks.length > 0) {
+                console.log('📍 Registered webhooks:');
+                response.webhooks.forEach((webhook) => {
+                    console.log(`   ${webhook.method} http://localhost:4000${webhook.path}`);
+                });
+            }
             setLastSaved(new Date().toLocaleTimeString());
 
             showModal(
@@ -418,24 +429,149 @@ const Editor: React.FC = () => {
         }
     };
 
-
-
     const handleRunWorkflow = async () => {
         console.log('🚀 Run button clicked!');
+
+        // Create a run entry so RunHistory tracks it
+        const run: WorkflowRun = createRun();
+        run.workflowId = workflow.id;
+
         try {
             console.clear();
-            console.log('🚀 Starting workflow execution...');
-            const testPayload = {
-                amount: 1500,
-                department: 'sales',
-                customerName: 'Test User',
-                timestamp: new Date().toISOString(),
-            };
-            await executeWorkflow(workflow, testPayload);
+
+            // Check if workflow has email-specific nodes that require backend execution
+            const hasEmailNodes = workflow.nodes.some(n =>
+                n.type === 'emailDiscovery' ||
+                n.type === 'emailSending' ||
+                n.type === 'scheduledEmail'
+            );
+
+            if (hasEmailNodes) {
+                // Use backend API for email workflows
+                console.log('🚀 Starting workflow execution via backend API (email workflow)...');
+
+                const { apiService } = await import('../services/api');
+                const result = await apiService.executeWorkflow(workflow);
+
+                if (result.status === 'success') {
+                    console.log('✅ Workflow executed successfully!');
+                    console.log('Results:', result.results);
+
+                    // Record each node result as a log entry
+                    if (result.results) {
+                        result.results.forEach((nodeResult: any) => {
+                            run.logs.push({
+                                nodeId: nodeResult.nodeId,
+                                nodeType: nodeResult.nodeType,
+                                input: {},
+                                output: nodeResult.result?.data,
+                                status: nodeResult.result?.status === 'success' ? 'success' : 'failed',
+                                error: nodeResult.result?.error,
+                                timestamp: Date.now(),
+                            });
+                        });
+                    }
+
+                    run.status = 'success';
+                    run.finishedAt = Date.now();
+                    updateRun(run);
+
+                    showModal('Execution Success', '✅ Workflow executed successfully! Check console for details.', 'success');
+                } else {
+                    console.error('❌ Workflow execution failed:', result.error);
+
+                    run.logs.push({
+                        nodeId: 'workflow',
+                        nodeType: 'workflow',
+                        input: {},
+                        status: 'failed',
+                        error: result.error,
+                        timestamp: Date.now(),
+                    });
+                    run.status = 'failed';
+                    run.finishedAt = Date.now();
+                    updateRun(run);
+
+                    showModal('Execution Failed', `❌ Workflow failed: ${result.error}`, 'error');
+                }
+            } else {
+                // Use frontend engine for schedule/webhook/general workflows
+                console.log('🚀 Starting workflow execution in browser...');
+                const testPayload = {
+                    amount: 1500,
+                    department: 'sales',
+                    customerName: 'Test User',
+                    timestamp: new Date().toISOString(),
+                };
+                await executeWorkflowInBrowser(workflow, testPayload);
+                console.log('✅ Workflow executed successfully!');
+
+                run.status = 'success';
+                run.finishedAt = Date.now();
+                updateRun(run);
+
+                showModal('Execution Success', '✅ Workflow executed successfully in browser!', 'success');
+            }
         } catch (error) {
-            console.error('Workflow execution failed:', error);
-            showModal('Execution Failed', `Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            console.error('❌ Workflow execution failed:', error);
+
+            run.logs.push({
+                nodeId: 'workflow',
+                nodeType: 'workflow',
+                input: {},
+                status: 'failed',
+                error: error instanceof Error ? error.message : 'Unknown error',
+                timestamp: Date.now(),
+            });
+            run.status = 'failed';
+            run.finishedAt = Date.now();
+            updateRun(run);
+
+            showModal('Execution Failed', `❌ Workflow failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
         }
+    };
+
+    const handleImportWorkflow = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e: any) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const importedWorkflow = JSON.parse(text);
+
+                // Convert backend format to frontend format if needed
+                const nodes = importedWorkflow.nodes.map((node: any) => ({
+                    id: node.id,
+                    type: node.type,
+                    data: {
+                        label: node.data?.label || `${node.type} Node`,
+                        config: node.config || node.data?.config || {},
+                    },
+                    position: node.position || { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 },
+                }));
+
+                setWorkflow({
+                    id: importedWorkflow.id || `workflow_${Date.now()}`,
+                    name: importedWorkflow.name || 'Imported Workflow',
+                    description: importedWorkflow.description || '',
+                    nodes: nodes,
+                    edges: importedWorkflow.edges || [],
+                    createdAt: importedWorkflow.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                });
+
+                console.log('✅ Workflow imported successfully:', importedWorkflow.id);
+                alert(`✅ Workflow "${importedWorkflow.name || 'Imported Workflow'}" loaded successfully!\n${nodes.length} nodes imported.`);
+            } catch (error) {
+                console.error('Failed to import workflow:', error);
+                alert(`❌ Failed to import workflow: ${error instanceof Error ? error.message : 'Invalid JSON'}`);
+            }
+        };
+        input.click();
     };
 
     const handleWorkflowNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -595,6 +731,16 @@ const Editor: React.FC = () => {
                         <span title={`Connections: ${workflow.edges.length}`}>🔗 {workflow.edges.length}</span>
                         {lastSaved && <span className="last-saved">Last saved: {lastSaved}</span>}
                     </div>
+
+                    {/* COMMENTED OUT: Import button
+                    <button
+                        className="import-button"
+                        onClick={handleImportWorkflow}
+                        title="Import workflow from JSON file"
+                    >
+                        📂 Import
+                    </button>
+                    */}
 
                     <button
                         className="run-button"

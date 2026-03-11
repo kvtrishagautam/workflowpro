@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 const BACKEND_URL = 'http://localhost:4000/api';
+=======
+// API service for backend communication
+
+const BACKEND_URL = 'http://localhost:4000';
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
 
 export interface SaveWorkflowResponse {
     status: string;
@@ -16,6 +22,7 @@ export interface TriggerWebhookResponse {
 }
 
 export class WorkflowAPI {
+<<<<<<< HEAD
     static getAuthHeaders() {
         const token = localStorage.getItem('token');
         return {
@@ -35,9 +42,32 @@ export class WorkflowAPI {
         if (!response.ok) {
             const error = await response.json().catch(() => ({ message: response.statusText }));
             throw new Error(error.message || `API error: ${response.status}`);
+=======
+    /**
+     * Save a workflow to the backend
+     */
+    static async saveWorkflow(workflow: any): Promise<SaveWorkflowResponse> {
+        const response = await fetch(`${BACKEND_URL}/workflows`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(workflow),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || error.error || 'Failed to save workflow');
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
         }
 
-        return response.json();
+        const data = await response.json();
+        // Normalize response: backend returns { message, workflow } or { status, workflowId, webhooks }
+        return {
+            status: data.status || 'success',
+            workflowId: data.workflowId || data.workflow?.id || '',
+            webhooks: data.webhooks || [],
+        };
     }
 
     /**
@@ -76,9 +106,13 @@ export class WorkflowAPI {
      * Get all workflows from the backend
      */
     static async getAllWorkflows(): Promise<any[]> {
+<<<<<<< HEAD
         const response = await fetch(`${BACKEND_URL}/workflows`, {
             headers: this.getAuthHeaders()
         });
+=======
+        const response = await fetch(`${BACKEND_URL}/workflows`);
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
 
         const data = await this.handleResponse(response);
         return data.workflows || [];

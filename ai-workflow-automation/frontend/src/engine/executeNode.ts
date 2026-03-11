@@ -129,6 +129,7 @@ async function executeConditional(
     if (config.conditionType === 'expression' && config.expression) {
         try {
             console.log(`[CONDITIONAL] Evaluating expression: ${config.expression}`);
+<<<<<<< HEAD
 
             // Replace dot notation variables (e.g., openai.output -> data.openai.output)
             let expression = config.expression;
@@ -136,12 +137,34 @@ async function executeConditional(
 
             if (varMatches) {
                 const uniqueVars: string[] = [...new Set<string>(varMatches)];
+=======
+            console.log(`[CONDITIONAL] Available data keys:`, Object.keys(data));
+
+            // Replace dot notation variables (e.g., openai.response -> data.openai.response)
+            // But exclude method calls (e.g., don't match .includes() part)
+            let expression = config.expression;
+            // Use word boundary \b to ensure we match complete identifiers, not partial ones
+            const varMatches = expression.match(/\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)\b(?!\s*\()/g);
+
+            if (varMatches) {
+                // Deduplicate variables
+                const uniqueVars: string[] = [...new Set<string>(varMatches)];
+
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
                 uniqueVars.forEach((varPath: string) => {
                     const parts = varPath.split('.');
                     let value = data;
                     for (const part of parts) {
                         value = value?.[part];
                     }
+<<<<<<< HEAD
+=======
+
+                    console.log(`[CONDITIONAL] Variable ${varPath} =`, value);
+
+                    // Always replace the variable, even if undefined
+                    // For undefined, use empty string to prevent eval errors
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
                     const replacementValue = value !== undefined ? JSON.stringify(value) : '""';
                     expression = expression.replace(
                         new RegExp(varPath.replace(/\./g, '\\.'), 'g'),
@@ -150,8 +173,16 @@ async function executeConditional(
                 });
             }
 
+<<<<<<< HEAD
             // eslint-disable-next-line no-eval
             result = eval(expression);
+=======
+            console.log(`[CONDITIONAL] Transformed expression: ${expression}`);
+
+            // Evaluate the expression
+            result = eval(expression);
+            console.log(`[CONDITIONAL] Expression result: ${result}`);
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
         } catch (error) {
             console.error(`[CONDITIONAL] Error evaluating expression:`, error);
             result = false;
@@ -160,6 +191,7 @@ async function executeConditional(
     // Support rule-based conditions (old format)
     else if (config.rule) {
         result = evaluateCondition(config.rule, data);
+<<<<<<< HEAD
     }
     // Support conditions array
     else if (config.conditions && Array.isArray(config.conditions)) {
@@ -191,13 +223,44 @@ async function executeConditional(
     run.logs.push(condLog);
     updateRun(run);
 
+=======
+        console.log(`[CONDITIONAL] Rule evaluated to ${result}`);
+    }
+    // Support conditions array (Filter node format)
+    else if (config.conditions && Array.isArray(config.conditions)) {
+        const combineOp = config.combineOperation || 'all';
+        const results = config.conditions.map((condition: any) => {
+            return evaluateCondition(condition, data);
+        });
+
+        result = combineOp === 'all'
+            ? results.every(r => r)
+            : results.some(r => r);
+
+        console.log(`[CONDITIONAL] Conditions evaluated to ${result}`);
+    }
+    else {
+        console.warn(`[WARN] Conditional node ${node.id} has no valid condition config`);
+        return executeNext(node, data, workflow, nodeMap, run);
+    }
+
+    console.log(
+        `[CONDITIONAL] Node ${node.id}: condition evaluated to ${result ? 'TRUE' : 'FALSE'}`
+    );
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
 
     const edge = workflow.edges.find(
         (e) => e.source === node.id && e.sourceHandle === (result ? 'true' : 'false')
     );
 
     if (!edge) {
+<<<<<<< HEAD
         console.log(`[INFO] No edge found for ${result ? 'true' : 'false'} branch, ending workflow`);
+=======
+        console.log(
+            `[INFO] No edge found for ${result ? 'TRUE' : 'FALSE'} branch, ending workflow`
+        );
+>>>>>>> 3dd29fab9d912a277f3822661dcb87d347a69f05
         return;
     }
 
