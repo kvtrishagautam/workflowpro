@@ -345,6 +345,39 @@ router.get('/workflows', (req: Request, res: Response) => {
     });
 });
 
+// Execute workflow endpoint (for direct execution without webhook)
+router.post('/api/workflows/execute', async (req: Request, res: Response) => {
+    try {
+        const workflow = req.body;
+
+        console.log(`\n🚀 Direct execution request for workflow: ${workflow.id || 'unnamed'}`);
+
+        // Validate workflow has nodes
+        if (!workflow.nodes || workflow.nodes.length === 0) {
+            return res.status(400).json({
+                status: 'error',
+                error: 'Workflow has no nodes'
+            });
+        }
+
+        // Execute workflow with empty payload (can be customized if needed)
+        const result = await executeWorkflow(workflow, {});
+
+        console.log(`✅ Workflow execution completed`);
+
+        res.json({
+            status: 'success',
+            result
+        });
+    } catch (error: any) {
+        console.error('❌ Workflow execution error:', error);
+        res.status(500).json({
+            status: 'error',
+            error: error.message || 'Workflow execution failed'
+        });
+    }
+});
+
 // Health check
 router.get('/health', (req: Request, res: Response) => {
     res.json({

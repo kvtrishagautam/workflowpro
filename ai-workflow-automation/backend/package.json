@@ -6,7 +6,7 @@
     "main": "dist/server.js",
     "scripts": {
         "build": "tsc",
-        "start": "node dist/server.js",
+        "start": "node dist/src/server.js",
         "dev": "ts-node src/index.ts",
         "dev:index": "ts-node src/index.ts",
         "test:custom": "ts-node scripts/test-email-workflow.ts",

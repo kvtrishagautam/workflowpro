@@ -114,6 +114,28 @@
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
+.import-button {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+}
+
+.import-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+}
+
+.import-button:active {
+    transform: translateY(0);
+}
+
 .run-button {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;

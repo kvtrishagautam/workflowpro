@@ -22,7 +22,7 @@ export class WorkflowAPI {
      * Save a workflow to the backend
      */
     static async saveWorkflow(workflow: any): Promise<SaveWorkflowResponse> {
-        const response = await fetch(`${BACKEND_URL}/api/workflows`, {
+        const response = await fetch(`${BACKEND_URL}/workflows`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ export class WorkflowAPI {
      * Get all workflows from the backend
      */
     static async getAllWorkflows(): Promise<any[]> {
-        const response = await fetch(`${BACKEND_URL}/api/workflows`);
+        const response = await fetch(`${BACKEND_URL}/workflows`);
 
         if (!response.ok) {
             throw new Error('Failed to fetch workflows');

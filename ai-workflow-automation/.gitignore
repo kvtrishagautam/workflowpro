@@ -22,6 +22,7 @@ node_modules/
 
 # Logs
 npm-debug.log*
+
 yarn-debug.log*
 yarn-error.log*
 *.log
@@ -57,3 +58,7 @@ backend/mongo-exports/
 
 # Build artifacts
 *.tsbuildinfo
+
+# Workflow files with API keys/credentials
+business-form-workflow.json
+news-monitor-workflow.json
