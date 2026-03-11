@@ -951,7 +951,18 @@ async function executeGoogleSheets(node: NodeProps, data: any): Promise<any> {
     const range = config.range || 'A:Z';
 
     // Get access token from credentials tab
-    const accessToken = config.accessToken || '';
+    let accessToken = config.accessToken || '';
+
+    // Sanitize token (strip quotes and Bearer prefix)
+    if (accessToken) {
+        accessToken = accessToken.trim();
+        if ((accessToken.startsWith('"') && accessToken.endsWith('"')) || (accessToken.startsWith("'") && accessToken.endsWith("'"))) {
+            accessToken = accessToken.slice(1, -1).trim();
+        }
+        if (accessToken.toLowerCase().startsWith('bearer ')) {
+            accessToken = accessToken.slice(7).trim();
+        }
+    }
 
     console.log(`[GOOGLE_SHEETS] Operation: ${operation}`);
     console.log(`[GOOGLE_SHEETS] Spreadsheet: ${spreadsheetId}, Sheet: ${sheetName}`);

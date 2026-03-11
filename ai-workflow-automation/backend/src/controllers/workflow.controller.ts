@@ -8,20 +8,38 @@ export const createWorkflow = async (req: AuthRequest, res: Response): Promise<v
         const { name, description, nodes, edges } = req.body;
         const workflowId = req.body.id || `wf_${Date.now()}`;
 
-        const workflow = new Workflow({
-            id: workflowId,
-            userId: req.user._id,
-            name,
-            description,
-            nodes: nodes || [],
-            edges: edges || [],
-        });
+        // Upsert: if a workflow with this id already exists for this user, update it
+        // instead of creating a duplicate. This handles the case where the frontend
+        // accidentally POSTs to create instead of PUT to update.
+        const existing = await Workflow.findOne({ id: workflowId, userId: req.user._id });
 
-        await workflow.save();
+        let workflow;
+        if (existing) {
+            // Update existing workflow (with markModified for Mixed-type config fields)
+            if (name !== undefined) existing.set('name', name);
+            if (description !== undefined) existing.set('description', description);
+            if (nodes !== undefined) existing.set('nodes', nodes);
+            if (edges !== undefined) existing.set('edges', edges);
+            existing.markModified('nodes');
+            existing.markModified('edges');
+            await existing.save();
+            workflow = existing;
+        } else {
+            // Create a brand-new workflow
+            workflow = new Workflow({
+                id: workflowId,
+                userId: req.user._id,
+                name,
+                description,
+                nodes: nodes || [],
+                edges: edges || [],
+            });
+            await workflow.save();
+        }
 
         const webhookNodes = (nodes || []).filter((n: any) => n.type === 'webhook');
 
-        res.status(201).json({
+        res.status(existing ? 200 : 201).json({
             status: 'saved',
             workflowId: workflow.id,
             webhooks: webhookNodes.map((n: any) => {
@@ -91,22 +109,33 @@ export const updateWorkflow = async (req: AuthRequest, res: Response): Promise<v
     try {
         const { name, description, nodes, edges, isActive } = req.body;
 
-        const workflow = await Workflow.findOneAndUpdate(
-            {
-                $or: [
-                    { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
-                    { id: req.params.id }
-                ].filter(q => q !== undefined),
-                userId: req.user._id
-            },
-            { name, description, nodes, edges, isActive },
-            { new: true, runValidators: true }
-        );
+        // We cannot use findOneAndUpdate for Mixed-type fields (like node.data.config)
+        // because Mongoose won't detect changes in nested Mixed objects unless we
+        // explicitly call markModified(). So we fetch, mutate, markModified, then save.
+        const workflow = await Workflow.findOne({
+            $or: [
+                { _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : undefined },
+                { id: req.params.id }
+            ].filter(q => q !== undefined),
+            userId: req.user._id
+        });
 
         if (!workflow) {
             res.status(404).json({ error: 'Workflow not found' });
             return;
         }
+
+        if (name !== undefined) workflow.set('name', name);
+        if (description !== undefined) workflow.set('description', description);
+        if (nodes !== undefined) workflow.set('nodes', nodes);
+        if (edges !== undefined) workflow.set('edges', edges);
+        if (isActive !== undefined) workflow.set('isActive', isActive);
+
+        // CRITICAL: tell Mongoose that Mixed-type embedded fields have changed
+        workflow.markModified('nodes');
+        workflow.markModified('edges');
+
+        await workflow.save();
 
         res.json(workflow);
     } catch (error: any) {

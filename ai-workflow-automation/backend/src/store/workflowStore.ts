@@ -11,7 +11,16 @@ export async function saveWorkflow(workflowData: IWorkflow): Promise<IWorkflow> 
 
         if (existing) {
             // Update existing workflow
-            Object.assign(existing, workflowData);
+            // Use set to properly replace arrays and mark Mixed fields as modified
+            existing.set('nodes', workflowData.nodes || existing.nodes);
+            existing.set('edges', workflowData.edges || existing.edges);
+            existing.set('name', workflowData.name || existing.name);
+            existing.set('description', workflowData.description ?? existing.description);
+            // CRITICAL: markModified is required for Mongoose Mixed-type fields
+            // Without this, changes to nested objects inside `config` (like accessToken)
+            // are silently dropped and NOT persisted to MongoDB
+            existing.markModified('nodes');
+            existing.markModified('edges');
             await existing.save();
             console.log(`Workflow ${workflowData.id} updated successfully`);
             return existing.toObject();

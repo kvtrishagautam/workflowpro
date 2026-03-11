@@ -41,7 +41,7 @@ export class WorkflowAPI {
     }
 
     /**
-     * Save a workflow to the backend
+     * Save a workflow to the backend (creates new)
      */
     static async saveWorkflow(workflow: any): Promise<SaveWorkflowResponse> {
         const response = await fetch(`${BACKEND_URL}/workflows`, {
@@ -51,6 +51,25 @@ export class WorkflowAPI {
         });
 
         return this.handleResponse(response);
+    }
+
+    /**
+     * Update an existing workflow (replaces nodes/edges/config)
+     */
+    static async updateWorkflow(id: string, workflow: any): Promise<SaveWorkflowResponse> {
+        const response = await fetch(`${BACKEND_URL}/workflows/${id}`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(workflow),
+        });
+
+        const data = await this.handleResponse(response);
+        // Normalise response shape to match SaveWorkflowResponse
+        return {
+            status: 'saved',
+            workflowId: data.id || id,
+            webhooks: data.webhooks,
+        };
     }
 
     /**

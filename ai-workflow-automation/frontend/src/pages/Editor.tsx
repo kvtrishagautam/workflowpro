@@ -329,39 +329,43 @@ const Editor: React.FC = () => {
         console.log('💾 Save button clicked!');
         setIsSaving(true);
         try {
-            // Import required utilities dynamically
             const { WorkflowAPI } = await import('../services/workflowAPI');
             const { toBackendWorkflow } = await import('../services/workflowConverter');
 
-            // Convert and save to backend
             const backendWorkflow = toBackendWorkflow(workflow);
-            const response = await WorkflowAPI.saveWorkflow(backendWorkflow);
+
+            // Use the workflow's own id to decide CREATE vs UPDATE
+            // If the workflow already has an id (set either from URL on load, or from a
+            // previous successful save), UPDATE the existing record via PUT.
+            // Only POST (create) when the workflow has never been saved before.
+            const existingId = workflow.id;
+            const params = new URLSearchParams(window.location.search);
+            const isExistingWorkflow = !!params.get('id') || !!existingId;
+
+            let response: { status: string; workflowId: string; webhooks?: any[] };
+            if (isExistingWorkflow && existingId) {
+                console.log(`♻️ Updating existing workflow: ${existingId}`);
+                response = await WorkflowAPI.updateWorkflow(existingId, backendWorkflow);
+            } else {
+                console.log('🆕 Creating new workflow...');
+                response = await WorkflowAPI.saveWorkflow(backendWorkflow);
+            }
 
             console.log('✅ Workflow saved to backend:', response);
 
-            // Update URL with new ID if it wasn't there
-            const params = new URLSearchParams(window.location.search);
-            if (!params.get('id')) {
+            // Update URL with the ID if it wasn't already there
+            if (!params.get('id') && response.workflowId) {
                 const newUrl = `${window.location.pathname}?id=${response.workflowId}`;
                 window.history.pushState({ path: newUrl }, '', newUrl);
-                setWorkflow({ ...workflow, id: response.workflowId });
-            }
-
-            // Log webhook URLs if any
-            if (response.webhooks && response.webhooks.length > 0) {
-                console.log('📍 Registered webhooks:');
-                response.webhooks.forEach((webhook: any) => {
-                    console.log(`   ${webhook.method} http://localhost:4000${webhook.path}`);
-                });
+                setWorkflow(prev => ({ ...prev, id: response.workflowId }));
             }
 
             setLastSaved(new Date().toLocaleTimeString());
 
-            // Show success notification
             showModal(
                 'Workflow Saved',
                 <div>
-                    <p>✅ Workflow <strong>{response.workflowId}</strong> saved successfully!</p>
+                    <p>✅ Workflow <strong>{response.workflowId}</strong> {isExistingWorkflow ? 'updated' : 'created'} successfully!</p>
                     <p>{response.webhooks?.length || 0} webhook(s) registered.</p>
                 </div>,
                 'success'
